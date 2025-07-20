@@ -1,9 +1,9 @@
 import express from "express";
-import { login } from "../controller/auth.controller.js";
+import createAdmin from "../controller/auth.controller.js";
 
 const authRouter = express.Router();
 
 
-authRouter.post('/login',login);
+authRouter.post('/create-admin',createAdmin);
 
 export default authRouter;

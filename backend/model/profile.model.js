@@ -20,15 +20,15 @@ const profileSchema = new mongoose.Schema({
   emergencyContact: {
     name: String,
     phone: String,
-    relation: String
+    relation: String,
   },
   maritalStatus: { type: String, enum: ["single", "married", "other"] },
-
-  profilepicture:{
+  profilePicture: {
     type: String,
-    default: "https://avatar.iran.liara.run/public/46"
-  }
-
+    default: "https://avatar.iran.liara.run/public/46",
+  },
 }, { timestamps: true });
 
-export default mongoose.model("Profile", profileSchema);
+const Profile = mongoose.model("Profile", profileSchema);
+
+export default Profile;
