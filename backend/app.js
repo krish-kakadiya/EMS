@@ -1,12 +1,11 @@
 import express from 'express';
+import authRouter from './routes/auth.routes.js';
 
 const app = express();
 
-
 app.use(express.json());
 
-app.get('/',(req,res)=>{
-    res.send('Welcome to the Employee Management System API');
-})
 
+app.use('/api/auth', authRouter);
+// http://localhost:3000/api/auth/login
 export default app;
