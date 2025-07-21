@@ -8,7 +8,7 @@ const leaveSchema = new mongoose.Schema({
   },
   type: {
     type: String,
-    enum: ["sick", "casual", "earned", "unpaid", "maternity", "paternity", "other"],
+    enum: ["medical","personal", "other"],
     required: true,
   },
   reason: {
@@ -27,19 +27,6 @@ const leaveSchema = new mongoose.Schema({
     type: String,
     enum: ["pending", "approved", "rejected"],
     default: "pending",
-  },
-  appliedAt: {
-    type: Date,
-    default: Date.now,
-  },
-  approvedBy: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "User", // usually an admin or HR
-    default: null,
-  },
-  rejectionReason: {
-    type: String,
-    default: null,
   }
 }, {
   timestamps: true

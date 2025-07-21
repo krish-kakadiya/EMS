@@ -7,21 +7,13 @@ const profileSchema = new mongoose.Schema({
     required: true,
     unique: true,
   },
-  gender: { type: String, enum: ["male", "female", "other"] },
+  gender: { type: String, enum: ["male", "female"] },
   dob: { type: Date },
   phone: { type: String },
   address: {
-    street: String,
-    city: String,
-    state: String,
-    country: String,
+    type: String,
   },
   joiningDate: { type: Date },
-  emergencyContact: {
-    name: String,
-    phone: String,
-    relation: String,
-  },
   maritalStatus: { type: String, enum: ["single", "married", "other"] },
   profilePicture: {
     type: String,
