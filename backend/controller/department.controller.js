@@ -19,5 +19,50 @@ const getAllDepartments = async (req, res) => {
     }
 };
 
+const createDepartment = async (req,res)=>{
+    try {
+        const { name } = req.body;
+        if(!name)
+        {
+            return res.status(400).json({
+                success: false,
+                message: "Department name is required"
+            });
+        }
 
-export { getAllDepartments };
+        const isDepartmentExists = await Department.findOne({ name });
+
+        if(isDepartmentExists)
+        {
+            return res.status(400).json({
+                success: false,
+                message: "Deparment already exists"
+            })
+        }
+
+        const department = await Department.create({name});
+        if(!department)
+        {
+            return res.status(400).json({
+                success: false,
+                message: "Failed to create department"
+            });
+        }
+    
+        res.status(201).json({
+            success: true,
+            message: "department created successfully",
+            department
+        })
+
+    } catch (error) {
+        console.error("Error creating department",error);
+        return res.status(500).json({
+            success:false,
+            message:"Internal server error while creating department"
+        })
+    }
+}
+
+
+export { getAllDepartments, createDepartment };
