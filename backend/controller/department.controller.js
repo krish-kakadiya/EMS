@@ -64,5 +64,38 @@ const createDepartment = async (req,res)=>{
     }
 }
 
+const deleteDepartment = async (req,res)=>{
+    try {
+        const { name } = req.body;
+        if(!name)
+        {
+            return res.status(400).json({
+                success: false,
+                message: "Department name is required"
+            })
+        }
+        const department  = await Department.findOneAndDelete({ name });
+        if(!department)
+        {
+            return res.status(404).json({
+                success: false,
+                message: "Department not found"
+            });
+        }
+        res.status(200).json({
+            success: true,
+            message: "Department deleted successfully",
+            department
+        });
 
-export { getAllDepartments, createDepartment };
+    } catch (error) {
+        console.error("Error deleting department",error);
+        return res.status(500).json({
+            success:false,
+            message:"Internal server error while deleting department"
+        })
+    }
+}
+
+
+export { getAllDepartments, createDepartment, deleteDepartment };
