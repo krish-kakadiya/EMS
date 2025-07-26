@@ -7,7 +7,7 @@ const getAllDepartments = async (req, res) => {
         res.status(200).json({
             success: true,
             message: "Departments retrieved successfully.",
-            data: departments,
+            departments
         });
     } catch (error) {
         console.error("Error fetching departments:", error);

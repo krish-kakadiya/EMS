@@ -2,6 +2,7 @@ import User from "../model/user.model.js";
 import Salary from "../model/salary.model.js";
 import Counter from "../model/counter.model.js";
 import Department from "../model/department.model.js";
+import Profile from "../model/profile.model.js";
 
 const createEmployee = async (req, res) => {
   try {
@@ -79,4 +80,71 @@ const createEmployee = async (req, res) => {
   }
 };
 
-export default createEmployee;
+const getAllEmployees = async (req,res) => {
+  try {
+    const employees = await User.find({ role: { $ne: 'admin' }});
+    if(!employees)
+    {
+      return res.status(404).json({
+        success: false,
+        message: "No employees found"
+      });
+    }
+    return res.status(200).json({
+      success: true,
+      message: "Employees fetched successfully",
+      employees
+    })
+    
+  } catch (error) {
+    console.error("Error fetching employees",error);
+    return res.status(500).json({
+      success:false,
+      message: "Internal server error while fetching employees"
+    })
+  }
+};
+
+const deleteEmployee  = async (req,res) => {
+  try {
+    const { id } = req.params;
+    if(!id)
+    {
+      return res.status(400).json({
+        success: false,
+        message: "Id is required"
+      })
+    }
+    
+    const employee = await User.findByIdAndDelete(id);
+
+    if(!employee){
+      return res.status(404).json({
+        success: false,
+        message: "Employee not found"
+      })
+    }
+    
+    const [deletedSalary, deletedProfile] = await Promise.all([
+      Salary.findOneAndDelete({ user: id }),
+      Profile.findOneAndDelete({ user: id })
+    ]);
+
+    if (!deletedSalary) console.warn(`No salary found for user ${id}`);
+    if (!deletedProfile) console.warn(`No profile found for user ${id}`);
+
+    return res.status(200).json({
+      success: true,
+      message: "Employee deleted successfully"
+    });
+
+  } catch (error) {
+    console.error("Error deleting employee",error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error while deleting employee"
+    })
+  }
+}
+
+export { createEmployee, getAllEmployees, deleteEmployee };
