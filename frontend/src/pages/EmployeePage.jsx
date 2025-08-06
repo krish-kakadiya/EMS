@@ -95,7 +95,6 @@ const EmployeePage = () => {
               <th>EMP ID</th>
               <th>PROFILE</th>
               <th>NAME</th>
-              <th>DOB</th>
               <th>DEPARTMENT</th>
               <th>ACTION</th>
             </tr>
@@ -110,7 +109,6 @@ const EmployeePage = () => {
                   </div>
                 </td>
                 <td>{employee.name}</td>
-                <td>{employee.dob}</td>
                 <td>{employee.department}</td>
                 <td>
                   <button 

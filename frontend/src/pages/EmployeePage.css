@@ -1,3 +1,5 @@
+
+
 .employee-page {
   background-color: white;
   min-height: 100vh;
@@ -157,6 +159,11 @@
 
 .employee-table tbody tr.odd-row {
   background-color: white;  /* White */
+}
+
+.employee-table tbody {
+  font-family:  "Roboto Condensed", sans-serif;
+
 }
 
 .profile-icon {
