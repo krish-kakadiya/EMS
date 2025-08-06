@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import './EmployeePage.css';
 import { FaChevronDown, FaUser, FaTrash } from 'react-icons/fa';
 
 const EmployeePage = () => {
   const [selectedFilter, setSelectedFilter] = useState('ALL');
   const [showDropdown, setShowDropdown] = useState(false);
+  const navigate = useNavigate();
 
   const employees = [
     {
@@ -38,6 +40,10 @@ const EmployeePage = () => {
   const handleFilterChange = (filter) => {
     setSelectedFilter(filter);
     setShowDropdown(false);
+  };
+
+  const handleAddNewEmployee = () => {
+    navigate('/add-new-user');
   };
 
   const filteredEmployees = selectedFilter === 'ALL' 
@@ -85,7 +91,9 @@ const EmployeePage = () => {
             </div>
           )}
         </div>
-        <button className="add-employee-btn">ADD NEW EMPLOYEE</button>
+        <button className="add-employee-btn" onClick={handleAddNewEmployee}>
+          ADD NEW EMPLOYEE
+        </button>
       </div>
 
       <div className="employee-table-container">
@@ -95,6 +103,7 @@ const EmployeePage = () => {
               <th>EMP ID</th>
               <th>PROFILE</th>
               <th>NAME</th>
+              <th>DOB</th>
               <th>DEPARTMENT</th>
               <th>ACTION</th>
             </tr>
@@ -109,6 +118,7 @@ const EmployeePage = () => {
                   </div>
                 </td>
                 <td>{employee.name}</td>
+                <td>{employee.dob}</td>
                 <td>{employee.department}</td>
                 <td>
                   <button 
