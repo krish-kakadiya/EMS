@@ -1,0 +1,17 @@
+.layout {
+  min-height: 100vh;
+  background-color: white;
+}
+
+.layout-content {
+  display: flex;
+  gap: 20px;
+  padding: 0 20px 20px 20px;
+}
+
+.main-content {
+  flex: 1;
+  background-color: white;
+  border-radius: 20px;
+  overflow: hidden;
+} 

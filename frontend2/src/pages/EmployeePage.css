@@ -1,0 +1,220 @@
+.employee-page {
+  background-color: white;
+  min-height: 100vh;
+  padding: 20px;
+  font-family: 'Segoe UI', sans-serif;
+}
+
+.employee-header {
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+.employee-title {
+  font-size: 32px;
+  font-weight: bold;
+  font-style: italic;
+  color: #333;
+  margin: 0;
+  text-transform: uppercase;
+}
+
+.employee-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 30px;
+  padding: 0 20px;
+  gap: 20px;
+}
+
+.filter-dropdown {
+  position: relative;
+  flex: 0 0 auto;
+}
+
+.add-employee-btn {
+  background-color: #B3C8CF;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  color: #333;
+  cursor: pointer;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+.filter-btn {
+  background-color: #B3C8CF;
+  border: none;
+  padding: 12px 20px;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  color: #333;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+  white-space: nowrap;
+}
+
+.filter-btn:hover {
+  background-color: #A3B8BF;
+  transform: translateY(-1px);
+}
+
+.chevron-icon {
+  font-size: 12px;
+  transition: transform 0.3s ease;
+}
+
+.chevron-icon.rotated {
+  transform: rotate(180deg);
+}
+
+.add-employee-btn:hover {
+  background-color: #A3B8BF;
+  transform: translateY(-1px);
+}
+
+/* Dropdown Menu Styles */
+.dropdown-menu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  background-color: white;
+  border: 1px solid #E8E8E8;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+  min-width: 200px;
+  margin-top: 4px;
+}
+
+.dropdown-item {
+  padding: 12px 16px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  color: #333;
+  transition: background-color 0.2s ease;
+  border-bottom: 1px solid #F0F0F0;
+}
+
+.dropdown-item:last-child {
+  border-bottom: none;
+}
+
+.dropdown-item:hover {
+  background-color: #F8F9FA;
+}
+
+.employee-table-container {
+  background-color: white;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  margin: 0 20px;
+}
+
+.employee-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.employee-table thead {
+  background-color: #B3C8CF;
+}
+
+.employee-table th {
+  padding: 16px 12px;
+  text-align: left;
+  font-weight: 600;
+  color: #333;
+  font-size: 14px;
+  text-transform: uppercase;
+}
+
+.employee-table td {
+  padding: 16px 12px;
+  border-bottom: 1px solid #E8E8E8;
+  vertical-align: middle;
+}
+
+/*for alternate row color*/
+/* In EmployeePage.css */
+.employee-table tbody tr.even-row {
+  background-color: white;  /* White */
+}
+
+.employee-table tbody tr.odd-row {
+  background-color: white;  /* White */
+}
+
+.profile-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background-color: #333;
+  border-radius: 50%;
+  color: white;
+  font-size: 16px;
+}
+
+.delete-btn {
+  background-color: #DC3545;
+  color: white;
+  border: none;
+  width: 95px;
+  height: 39px;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: all 0.3s ease;
+}
+
+.delete-btn:hover {
+  background-color: #C82333;
+  transform: translateY(-1px);
+}
+
+.delete-btn svg {
+  font-size: 10px;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .employee-actions {
+    flex-direction: column;
+    gap: 15px;
+    align-items: stretch;
+  }
+  
+  .employee-table {
+    font-size: 12px;
+  }
+  
+  .employee-table th,
+  .employee-table td {
+    padding: 12px 8px;
+  }
+  
+  .employee-title {
+    font-size: 24px;
+  }
+} 
