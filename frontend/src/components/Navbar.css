@@ -19,18 +19,18 @@
 
 .logout-btn {
   background-color: #C4DAD2;
-  color: #16423C;
+  color: black;
   border: none;
   padding: 10px 25px;
   font-size: larger;
   font-weight: bold;
   cursor: pointer;
   border-radius: 8px;
-  box-shadow: 2px 2px 4px #678;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   transition: all 0.3s ease;
 }
 
 .logout-btn:hover {
-  background-color: #b4cbc2;
+  background-color: #abbdc3;
   transform: scale(1.05);
 }

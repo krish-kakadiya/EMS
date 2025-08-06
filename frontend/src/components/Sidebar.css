@@ -1,6 +1,7 @@
 .sidebar {
-  background-color: #B3C8CF;
+  background-color: #89A8B2;
   width: 260px;
+  height: 71.5vh;
   padding: 25px 15px;
   border-radius: 20px;
   display: flex;
@@ -33,9 +34,8 @@
 }
 
 .sidebar-item.active {
-  background-color: #5e859c;
-  background: rgba(255, 255, 255, 0.2);
-  color: #ffffff;
+  background-color: #9cbbc6;
+
   box-shadow: 0 6px 15px rgba(0, 0, 0, 0.25);
 }
 
