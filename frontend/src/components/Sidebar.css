@@ -34,6 +34,7 @@
 
 .sidebar-item.active {
   background-color: #5e859c;
+  background: rgba(255, 255, 255, 0.2);
   color: #ffffff;
   box-shadow: 0 6px 15px rgba(0, 0, 0, 0.25);
 }
