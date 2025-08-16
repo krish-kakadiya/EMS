@@ -71,6 +71,14 @@ export const login = async (req,res)=>{
       })
     }
 
+    if(!password)
+    {
+      return res.status(400).json({
+        success: false,
+        message:"Password require"
+      })
+    }
+
     const user = await User.findOne({
       $or: [
         {email: email},
@@ -86,11 +94,11 @@ export const login = async (req,res)=>{
       })
     }
 
-    if(!user.matchPassword(password))
+    if(!(await user.matchPassword(password)))
     {
       return res.status(401).json({
         success: false,
-        message: "Onvalid credentials"
+        message: "Invalid credentials"
       })
     }
 
@@ -123,3 +131,35 @@ export const login = async (req,res)=>{
   }
 }
 
+export const me = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id).select('-password');
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found',
+      });
+    }
+    res.json({
+      success: true,
+      user,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Server error',
+    });
+  }
+}
+
+export const logout =  (req, res) => {
+  res.clearCookie('token', {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'strict',
+  });
+  res.json({
+    success: true,
+    message: 'Logged out successfully',
+  });
+}
