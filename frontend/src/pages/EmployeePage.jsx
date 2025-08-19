@@ -1,40 +1,43 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import './EmployeePage.css';
-import { FaChevronDown, FaUser, FaTrash } from 'react-icons/fa';
+// src/pages/EmployeePage.jsx
+import React, { useEffect, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { useNavigate } from "react-router-dom";
+import { FaChevronDown, FaUser, FaTrash } from "react-icons/fa";
+import {
+  getAllEmployees,
+  deleteEmployee,
+  clearMessages,
+} from "../redux/slices/employeeSlice";
+import "./EmployeePage.css";
 
 const EmployeePage = () => {
-  const [selectedFilter, setSelectedFilter] = useState('ALL');
+  const [selectedFilter, setSelectedFilter] = useState("ALL");
   const [showDropdown, setShowDropdown] = useState(false);
+
   const navigate = useNavigate();
+  const dispatch = useDispatch();
 
-  const employees = [
-    {
-      id: 'EMP1',
-      name: 'HARDIK HADIYA',
-      dob: '21/08/2006',
-      department: 'FRONTEND DEVELOPER',
-      profile: '👤'
-    },
-    {
-      id: 'EMP2',
-      name: 'JAGDISH HADIYAL',
-      dob: '07/01/2006',
-      department: 'FULL STACK DEVELOPER',
-      profile: '👤'
-    },
-    {
-      id: 'EMP3',
-      name: 'KRISH KAKADIYA',
-      dob: '19/11/2005',
-      department: 'BACKEND DEVELOPER',
-      profile: '👤'
+  const { employees, loading, error, success } = useSelector(
+    (state) => state.employees
+  );
+
+  // Fetch employees on page load
+  useEffect(() => {
+    dispatch(getAllEmployees());
+  }, [dispatch]);
+
+  // Clear success/error messages after few seconds
+  useEffect(() => {
+    if (error || success) {
+      const timer = setTimeout(() => {
+        dispatch(clearMessages());
+      }, 3000);
+      return () => clearTimeout(timer);
     }
-  ];
+  }, [error, success, dispatch]);
 
-  const handleDelete = (employeeId) => {
-    // Handle delete functionality
-    console.log('Delete employee:', employeeId);
+  const handleDelete = (id) => {
+    dispatch(deleteEmployee(id));
   };
 
   const handleFilterChange = (filter) => {
@@ -43,49 +46,65 @@ const EmployeePage = () => {
   };
 
   const handleAddNewEmployee = () => {
-    navigate('/add-new-user');
+    navigate("/add-new-user");
   };
 
-  const filteredEmployees = selectedFilter === 'ALL' 
-    ? employees 
-    : employees.filter(employee => {
-        if (selectedFilter === 'FRONTEND') {
-          return employee.department.includes('FRONTEND');
-        } else if (selectedFilter === 'BACKEND') {
-          return employee.department.includes('BACKEND');
-        } else if (selectedFilter === 'FULL STACK') {
-          return employee.department.includes('FULL STACK');
-        }
-        return false;
-      });
+  // Filtering logic
+  const filteredEmployees =
+    selectedFilter === "ALL"
+      ? employees
+      : employees.filter((employee) => {
+          if (selectedFilter === "FRONTEND") {
+            return employee.department.includes("FRONTEND");
+          } else if (selectedFilter === "BACKEND") {
+            return employee.department.includes("BACKEND");
+          } else if (selectedFilter === "FULL STACK") {
+            return employee.department.includes("FULL STACK");
+          }
+          return false;
+        });
 
   return (
     <div className="employee-page">
       <div className="employee-header">
         <h1 className="employee-title">MANAGE EMPLOYEES</h1>
       </div>
-      
+
       <div className="employee-actions">
         <div className="filter-dropdown">
-          <button 
+          <button
             className="filter-btn"
             onClick={() => setShowDropdown(!showDropdown)}
           >
             {selectedFilter}
-            <FaChevronDown className={`chevron-icon ${showDropdown ? 'rotated' : ''}`} />
+            <FaChevronDown
+              className={`chevron-icon ${showDropdown ? "rotated" : ""}`}
+            />
           </button>
           {showDropdown && (
             <div className="dropdown-menu">
-              <div className="dropdown-item" onClick={() => handleFilterChange('ALL')}>
+              <div
+                className="dropdown-item"
+                onClick={() => handleFilterChange("ALL")}
+              >
                 ALL
               </div>
-              <div className="dropdown-item" onClick={() => handleFilterChange('FRONTEND')}>
+              <div
+                className="dropdown-item"
+                onClick={() => handleFilterChange("FRONTEND")}
+              >
                 FRONTEND DEVELOPER
               </div>
-              <div className="dropdown-item" onClick={() => handleFilterChange('BACKEND')}>
+              <div
+                className="dropdown-item"
+                onClick={() => handleFilterChange("BACKEND")}
+              >
                 BACKEND DEVELOPER
               </div>
-              <div className="dropdown-item" onClick={() => handleFilterChange('FULL STACK')}>
+              <div
+                className="dropdown-item"
+                onClick={() => handleFilterChange("FULL STACK")}
+              >
                 FULL STACK DEVELOPER
               </div>
             </div>
@@ -96,6 +115,11 @@ const EmployeePage = () => {
         </button>
       </div>
 
+      {/* Show loading/error/success */}
+      {loading && <p>Loading employees...</p>}
+      {error && <p className="error">{error}</p>}
+      {success && <p className="success">{success}</p>}
+
       <div className="employee-table-container">
         <table className="employee-table">
           <thead>
@@ -103,33 +127,41 @@ const EmployeePage = () => {
               <th>EMP ID</th>
               <th>PROFILE</th>
               <th>NAME</th>
-              <th>DOB</th>
               <th>DEPARTMENT</th>
               <th>ACTION</th>
             </tr>
           </thead>
           <tbody>
             {filteredEmployees.map((employee, index) => (
-              <tr key={employee.id} className={index % 2 === 0 ? 'even-row' : 'odd-row'}>
-                <td>{employee.id}</td>
+              <tr
+                key={employee._id}
+                className={index % 2 === 0 ? "even-row" : "odd-row"}
+              >
+                <td>{employee.employeeId}</td>
                 <td>
                   <div className="profile-icon">
                     <FaUser />
                   </div>
                 </td>
                 <td>{employee.name}</td>
-                <td>{employee.dob}</td>
                 <td>{employee.department}</td>
                 <td>
-                  <button 
+                  <button
                     className="delete-btn"
-                    onClick={() => handleDelete(employee.id)}
+                    onClick={() => handleDelete(employee._id)}
                   >
                     <FaTrash /> DELETE
                   </button>
                 </td>
               </tr>
             ))}
+            {filteredEmployees.length === 0 && !loading && (
+              <tr>
+                <td colSpan="5" style={{ textAlign: "center" }}>
+                  No employees found.
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>
@@ -137,4 +169,4 @@ const EmployeePage = () => {
   );
 };
 
-export default EmployeePage; 
+export default EmployeePage;

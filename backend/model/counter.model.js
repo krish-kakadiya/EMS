@@ -9,7 +9,7 @@ const counterSchema = new mongoose.Schema({
   },
   count: {
     type: Number,
-    default: 0,
+    default: 0, 
   },
 });
 

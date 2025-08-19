@@ -1,9 +1,9 @@
 import express from 'express';
 import authRouter from './routes/auth.routes.js';
-import departmentRouter from './routes/department.routes.js';
 import cookieParser from 'cookie-parser';
 import employeeRoute from './routes/employee.routes.js';
 import cors from 'cors';
+import adminRouter from './routes/admin.routes.js';
 
 const app = express();
 
@@ -18,9 +18,8 @@ app.use(cors({
 
 
 app.use('/api/auth', authRouter);
-
-app.use('/api/departments', departmentRouter);
 app.use('/api/employees', employeeRoute);
+app.use('/api/admin',adminRouter)
 // http://localhost:3000/api/auth
 // http://localhost:3000/api/departments
 // http://localhost:3000/api/employees

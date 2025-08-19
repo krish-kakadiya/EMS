@@ -1,7 +1,6 @@
   import User from "../model/user.model.js";
   import Salary from "../model/salary.model.js";
   import Counter from "../model/counter.model.js";
-  import Department from "../model/department.model.js";
   import Profile from "../model/profile.model.js";
 
   const createEmployee = async (req, res) => {
@@ -24,8 +23,6 @@
           message: "Employee already exists with this email",
         });
       }
-
-      const mydepartment = await Department.findOne({ name: department });
 
       // 3. Auto-generate ID based on role
       const rolePrefix = role.slice(0, 3).toUpperCase(); // EMP, ADM, HR
@@ -53,7 +50,7 @@
         name,
         email,
         role,
-        department: mydepartment._id, 
+        department, 
         password,
         employeeId, // add this in your schema
       });

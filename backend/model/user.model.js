@@ -30,8 +30,7 @@ const userSchema = new mongoose.Schema({
     default: "employee",
   },
   department: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "Department",
+    type: String,
     required: true
   },
   isProfileComplete: {

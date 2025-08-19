@@ -14,7 +14,7 @@ const profileSchema = new mongoose.Schema({
     type: String,
   },
   joiningDate: { type: Date },
-  maritalStatus: { type: String, enum: ["single", "married", "other"] },
+  maritalStatus: { type: String, enum: ["single", "married"] },
   profilePicture: {
     type: String,
     default: "https://avatar.iran.liara.run/public/46",

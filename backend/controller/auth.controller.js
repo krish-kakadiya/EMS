@@ -1,5 +1,4 @@
 import User from "../model/user.model.js";
-import Department from "../model/department.model.js";
 import Counter from "../model/counter.model.js";
 
 // const createAdmin = async (req, res) => {

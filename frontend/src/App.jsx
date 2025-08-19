@@ -20,7 +20,7 @@ function App() {
         element={user ? <Navigate to="/" replace /> : <LoginPage />}
       />
 
-      {/* Protected routes */}
+      {/* Protected routes*/}
       <Route
         path="/"
         element={
