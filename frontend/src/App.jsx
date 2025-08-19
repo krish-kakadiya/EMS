@@ -3,6 +3,8 @@ import { Routes, Route, Navigate } from "react-router-dom";
 import DashboardPage from "./pages/DashboardPage";
 import EmployeePage from "./pages/EmployeePage";
 import AddNewUserPage from "./pages/AddNewUserPage";
+import LeavePage from "./pages/LeavePage";
+
 import Layout from "./components/Layout";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { useSelector } from "react-redux";
@@ -24,11 +26,12 @@ function App() {
       <Route
         path="/"
         element={
-          <ProtectedRoute>
+              <ProtectedRoute>
             <Layout activePage="dashboard">
               <DashboardPage />
             </Layout>
-          </ProtectedRoute>
+            </ProtectedRoute>
+        
         }
       />
       <Route
@@ -38,19 +41,32 @@ function App() {
             <Layout activePage="employees">
               <EmployeePage />
             </Layout>
-          </ProtectedRoute>
+            </ProtectedRoute>
+         
+        }
+      />
+      <Route
+        path="/leave"
+        element={
+          
+            <Layout activePage="leave">
+              <LeavePage />
+            </Layout>
+          
         }
       />
       <Route
         path="/add-new-user"
         element={
-          <ProtectedRoute>
+       <ProtectedRoute>
             <Layout activePage="employees">
               <AddNewUserPage />
             </Layout>
-          </ProtectedRoute>
+            </ProtectedRoute>
+        
         }
       />
+      
     </Routes>
     <Toaster position="top-center" toastOptions={{ duration: 3000 }} />
     </>
