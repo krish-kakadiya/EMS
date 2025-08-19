@@ -1,0 +1,142 @@
+.leave-page {
+  background-color: white;
+  min-height: 100vh;
+  padding: 20px;
+  font-family: 'Segoe UI', sans-serif;
+}
+
+.leave-header {
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+.leave-title {
+  font-size: 32px;
+  font-weight: bold;
+  font-style: italic;
+  color: #333;
+  margin: 0;
+  text-transform: uppercase;
+}
+
+.leave-table-container {
+  background-color: white;
+  border-radius: 12px;
+  /* Allow dropdowns inside table cells to render outside */
+  overflow: visible;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  margin: 0 20px;
+}
+
+.leave-table {
+  width: 100%;
+  border-collapse: separate; /* needed for rounded corners on cells */
+  border-spacing: 0; /* keep rows tightly together */
+  font-size: 14px;
+}
+
+.leave-table thead {
+  background-color: #B3C8CF;
+}
+
+.leave-table th {
+  padding: 16px 12px;
+  text-align: left;
+  font-weight: 600;
+  color: #333;
+  font-size: 14px;
+  text-transform: uppercase;
+  background-color: #B3C8CF;
+}
+
+/* Center the STATUS header */
+.leave-table th:last-child { text-align: center; }
+
+.leave-table td {
+  padding: 16px 12px;
+  border-bottom: 1px solid #E8E8E8;
+  vertical-align: middle;
+  background: #ffffff;
+}
+
+/* Center the STATUS column content */
+.leave-table td:last-child { text-align: center; }
+
+/* Round table corners like the screenshot */
+.leave-table thead th:first-child { border-top-left-radius: 12px; }
+.leave-table thead th:last-child { border-top-right-radius: 12px; }
+.leave-table tbody tr:last-child td:first-child { border-bottom-left-radius: 12px; }
+.leave-table tbody tr:last-child td:last-child { border-bottom-right-radius: 12px; }
+
+.leave-table tbody tr.even-row {
+  background-color: white;
+}
+
+.leave-table tbody tr.odd-row {
+  background-color: #F9F9F9;
+}
+
+.profile-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background-color: #333;
+  border-radius: 50%;
+  color: white;
+  font-size: 16px;
+}
+
+/* Status buttons group */
+.status-group {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  justify-content: center;
+}
+
+.status-chip {
+  border: none;
+  border-radius: 10px;
+  padding: 10px 16px;
+  font-weight: 800;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: transform 0.1s ease, box-shadow 0.2s ease;
+}
+
+.status-chip:hover { transform: translateY(-1px); }
+.status-chip.active { box-shadow: 0 2px 8px rgba(0,0,0,0.15); }
+
+.status-chip.approved { background: #B3C8CF; color: #333; }
+.status-chip.rejected { background: #B3C8CF; color: #333; }
+
+/* Optional stronger colors when active */
+.status-chip.approved.active { background: #a8c0c7; }
+.status-chip.rejected.active { background: #a8c0c7; }
+
+/* Middle status label */
+.status-indicator {
+  min-width: 140px;
+  text-align: center;
+  font-weight: 900;
+  text-transform: uppercase;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: #e6eef1;
+  color: #333;
+}
+.status-indicator.approved { background: #d7e4e8; }
+.status-indicator.rejected { background: #f0d7d7; }
+
+.chevron-icon { font-size: 12px; transition: transform 0.2s ease; }
+.chevron-icon.rotated { transform: rotate(180deg); }
+
+@media (max-width: 768px) {
+  .leave-title { font-size: 24px; }
+  .leave-table { font-size: 12px; }
+  .leave-table th, .leave-table td { padding: 12px 8px; }
+}
+
+
