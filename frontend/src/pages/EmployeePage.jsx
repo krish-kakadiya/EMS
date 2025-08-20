@@ -21,12 +21,12 @@ const EmployeePage = () => {
     (state) => state.employees
   );
 
-  // Fetch employees on page load
+  // ✅ Fetch employees on mount
   useEffect(() => {
     dispatch(getAllEmployees());
   }, [dispatch]);
 
-  // Clear success/error messages after few seconds
+  // ✅ Auto clear error/success after 3 seconds
   useEffect(() => {
     if (error || success) {
       const timer = setTimeout(() => {
@@ -36,20 +36,23 @@ const EmployeePage = () => {
     }
   }, [error, success, dispatch]);
 
+  // ✅ Delete employee
   const handleDelete = (id) => {
     dispatch(deleteEmployee(id));
   };
 
+  // ✅ Handle filter dropdown
   const handleFilterChange = (filter) => {
     setSelectedFilter(filter);
     setShowDropdown(false);
   };
 
+  // ✅ Navigate to add employee page
   const handleAddNewEmployee = () => {
     navigate("/add-new-user");
   };
 
-  // Filtering logic
+  // ✅ Filtering employees by department
   const filteredEmployees =
     selectedFilter === "ALL"
       ? employees
@@ -66,10 +69,12 @@ const EmployeePage = () => {
 
   return (
     <div className="employee-page">
+      {/* ---------- Header ---------- */}
       <div className="employee-header">
         <h1 className="employee-title">MANAGE EMPLOYEES</h1>
       </div>
 
+      {/* ---------- Actions ---------- */}
       <div className="employee-actions">
         <div className="filter-dropdown">
           <button
@@ -81,6 +86,7 @@ const EmployeePage = () => {
               className={`chevron-icon ${showDropdown ? "rotated" : ""}`}
             />
           </button>
+
           {showDropdown && (
             <div className="dropdown-menu">
               <div
@@ -110,16 +116,18 @@ const EmployeePage = () => {
             </div>
           )}
         </div>
+
         <button className="add-employee-btn" onClick={handleAddNewEmployee}>
           ADD NEW EMPLOYEE
         </button>
       </div>
 
-      {/* Show loading/error/success */}
+      {/* ---------- Status Messages ---------- */}
       {loading && <p>Loading employees...</p>}
       {error && <p className="error">{error}</p>}
       {success && <p className="success">{success}</p>}
 
+      {/* ---------- Employee Table ---------- */}
       <div className="employee-table-container">
         <table className="employee-table">
           <thead>
@@ -131,10 +139,12 @@ const EmployeePage = () => {
               <th>ACTION</th>
             </tr>
           </thead>
+
           <tbody>
+            {/* ✅ Map employees with unique key */}
             {filteredEmployees.map((employee, index) => (
               <tr
-                key={employee._id}
+                key={employee._id || `${employee.employeeId}-${index}`}
                 className={index % 2 === 0 ? "even-row" : "odd-row"}
               >
                 <td>{employee.employeeId}</td>
@@ -155,8 +165,10 @@ const EmployeePage = () => {
                 </td>
               </tr>
             ))}
+
+            {/* ✅ No Employees Fallback */}
             {filteredEmployees.length === 0 && !loading && (
-              <tr>
+              <tr key="no-employees">
                 <td colSpan="5" style={{ textAlign: "center" }}>
                   No employees found.
                 </td>

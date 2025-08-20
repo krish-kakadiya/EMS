@@ -78,50 +78,60 @@
   };
 
   const getAllEmployees = async (req, res) => {
-    try {
-      const employees = await User.aggregate([
-        {
-          $match: {
-            role: { $ne: 'admin' }
-          }
+  try {
+    const employees = await User.aggregate([
+      {
+        $match: {
+          role: { $ne: "admin" }, // exclude admins
         },
-        {
-          $lookup: {
-            from: 'salaries',       // Must match the actual collection name in MongoDB
-            localField: '_id',
-            foreignField: 'user',
-            as: 'salary'
-          }
+      },
+      {
+        $lookup: {
+          from: "salaries", // collection name
+          localField: "_id",
+          foreignField: "user",
+          as: "salary",
         },
-        {
-          $unwind: {
-            path: '$salary',
-            preserveNullAndEmptyArrays: true  // Keep employees even if no salary
-          }
-        }
-      ]);
+      },
+      {
+        $unwind: {
+          path: "$salary",
+          preserveNullAndEmptyArrays: true, // keep employees even if no salary
+        },
+      },
+      {
+        $project: {
+          _id: 1,
+          employeeId: 1,
+          name: 1,
+          email: 1,
+          role: 1,
+          department: 1,
+          "salary.basic": 1, // only return basic salary field
+        },
+      },
+    ]);
 
-      if (!employees || employees.length === 0) {
-        return res.status(404).json({
-          success: false,
-          message: "No employees found"
-        });
-      }
-
-      return res.status(200).json({
-        success: true,
-        message: "Employees fetched successfully",
-        employees
-      });
-
-    } catch (error) {
-      console.error("Error fetching employees:", error);
-      return res.status(500).json({
+    if (!employees || employees.length === 0) {
+      return res.status(404).json({
         success: false,
-        message: "Internal server error while fetching employees"
+        message: "No employees found",
       });
     }
-  };
+
+    return res.status(200).json({
+      success: true,
+      message: "Employees fetched successfully",
+      employees,
+    });
+  } catch (error) {
+    console.error("Error fetching employees:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error while fetching employees",
+    });
+  }
+};
 
 
   const deleteEmployee  = async (req,res) => {
