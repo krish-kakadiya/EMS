@@ -109,12 +109,12 @@
 .status-chip:hover { transform: translateY(-1px); }
 .status-chip.active { box-shadow: 0 2px 8px rgba(0,0,0,0.15); }
 
-.status-chip.approved { background: #B3C8CF; color: #333; }
-.status-chip.rejected { background: #B3C8CF; color: #333; }
+.status-chip.approve { background: green; color: white; }
+.status-chip.reject { background: red; color: white; }
 
 /* Optional stronger colors when active */
-.status-chip.approved.active { background: #a8c0c7; }
-.status-chip.rejected.active { background: #a8c0c7; }
+.status-chip.approve.active { background: green; }
+.status-chip.reject.active { background: red; }
 
 /* Middle status label */
 .status-indicator {

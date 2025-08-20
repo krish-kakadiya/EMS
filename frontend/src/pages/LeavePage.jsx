@@ -62,7 +62,7 @@ const LeavePage = () => {
                 <td>{leave.endDate}</td>
                 <td>
                   <div className="status-group">
-                    {["APPROVED", "REJECTED"].map((s) => (
+                    {["APPROVE", "REJECT"].map((s) => (
                       <button
                         key={s}
                         type="button"

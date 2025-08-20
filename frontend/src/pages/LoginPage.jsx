@@ -43,6 +43,8 @@ const LoginPage = () => {
             <input
               type="email"
               placeholder="EMAIL"
+              id="email"
+              name="email"
               className="input-field"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -56,6 +58,8 @@ const LoginPage = () => {
               type={showPassword ? "text" : "password"}
               placeholder="PASSWORD"
               className="input-field"
+              id="password"
+              name="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
