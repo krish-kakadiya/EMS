@@ -9,7 +9,7 @@ const DashboardPage = () => {
       <div className="dashboard-content">
         <DashboardCard icon={<FaDollarSign />} title="Monthly Pay" value="₹5,00,000" />
         <DashboardCard icon={<FaUser />} title="Total Employees" value="3" />
-        <DashboardCard icon={<FaBuilding />} title="Total Departments" value="5" />
+        <DashboardCard icon={<FaBuilding />} title="Total Departments" value="3" />
       </div>
     </div>
   );

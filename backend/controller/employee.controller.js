@@ -15,6 +15,16 @@
         });
       }
 
+      const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+      if(!emailPattern.test(email))
+      {
+        return res.status(401).json({
+          success:false,
+          message: "Invalid Email"
+        })
+      }
+
       // 2. Check for existing user by email
       const existingUser = await User.findOne({ email });
       if (existingUser) {
