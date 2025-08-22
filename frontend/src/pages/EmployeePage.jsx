@@ -38,8 +38,12 @@ const EmployeePage = () => {
 
   // ✅ Delete employee
   const handleDelete = (id) => {
-    dispatch(deleteEmployee(id));
+    const confirmed = window.confirm("Are you sure you want to delete this employee?");
+    if (confirmed) {
+      dispatch(deleteEmployee(id));
+    }
   };
+
 
   // ✅ Handle filter dropdown
   const handleFilterChange = (filter) => {
