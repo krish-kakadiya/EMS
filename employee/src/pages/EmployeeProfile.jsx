@@ -18,7 +18,7 @@ const EmployeeProfile = () => {
         {/* Profile Photo */}
         <div className="profile-photo-section">
           <img
-            src={profileImg || "https://via.placeholder.com/120"}
+            src={profileImg || "https://avatar.iran.liara.run/public/17"}
             alt="Profile"
             className="profile-photo"
           />
@@ -37,32 +37,32 @@ const EmployeeProfile = () => {
         <div className="profile-info">
           <div className="row">
             <label>EMP_ID:</label>
-            <input type="text" value="EMP1" readOnly />
+            <input type="text" value="EMP1" disabled/>
           </div>
           <div className="row">
             <label>NAME:</label>
-            <input type="text" value="HADIYA HARDIK" />
+            <input type="text" value="HADIYA HARDIK" disabled/>
           </div>
           <div className="row">
             <label>DEPARTMENT:</label>
-            <input type="text" value="FRONTEND DEVELOPMENT" />
+            <input type="text" value="FRONTEND DEVELOPMENT" disabled/>
           </div>
           <div className="row">
             <label>E-MAIL:</label>
-            <input type="email" value="hardikhadiya21@gmail.com" />
+            <input type="email" value="hardikhadiya21@gmail.com" disabled/>
           </div>
           <div className="row">
             <label>PASSWORD:</label>
-            <input type="password" value="*****" />
+            <input type="password" value="*****" readOnly/>
             <button className="btn-small">CHANGE PASSWORD</button>
           </div>
           <div className="row">
             <label>ROLE:</label>
-            <input type="text" value="EMPLOYEE" readOnly />
+            <input type="text" value="EMPLOYEE" disabled/>
           </div>
           <div className="row">
             <label>SALARY:</label>
-            <input type="text" value="XXXX" />
+            <input type="text" value="XXXX" disabled/>
           </div>
         </div>
       </div>
