@@ -3,23 +3,23 @@ import { Navigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { getCurrentUser } from "../redux/slices/authSlice";
 
-const ProtectedRoute = ({ children }) => {
+const ProtectedRoute = ({ children, adminOnly = false }) => {
   const dispatch = useDispatch();
   const { user, loading } = useSelector((state) => state.auth);
 
   useEffect(() => {
-    // Only fetch user if not already in state
     if (!user) {
       dispatch(getCurrentUser());
     }
   }, [dispatch, user]);
 
-  if (loading) {
-    return <div>Loading...</div>; // wait until auth check is done
-  }
+  if (loading) return <div>Loading...</div>;
 
-  if (!user) {
-    return <Navigate to="/login" replace />;
+  if (!user) return <Navigate to="/login" replace />;
+
+  if (adminOnly && user.role !== "admin") {
+    // Redirect non-admins to EmployeeProfile
+    return <Navigate to="/profile" replace />;
   }
 
   return children;

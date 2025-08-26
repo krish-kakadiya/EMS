@@ -1,76 +1,90 @@
 import LoginPage from "./pages/LoginPage";
-import { Routes, Route, Navigate } from "react-router-dom";
 import DashboardPage from "./pages/DashboardPage";
 import EmployeePage from "./pages/EmployeePage";
 import AddNewUserPage from "./pages/AddNewUserPage";
 import LeavePage from "./pages/LeavePage";
 
+
 import Layout from "./components/Layout";
 import ProtectedRoute from "./components/ProtectedRoute";
+import { Routes, Route, Navigate } from "react-router-dom";
 import { useSelector } from "react-redux";
 import { Toaster } from "react-hot-toast";
+import EmployeeProfile from "./pages/employee/EmployeeProfile";
 
 function App() {
   const { user } = useSelector((state) => state.auth);
 
   return (
     <>
-    <Routes>
-      {/* If user already logged in → redirect login → dashboard */}
-      <Route
-        path="/login"
-        element={user ? <Navigate to="/" replace /> : <LoginPage />}
-      />
+      <Routes>
+        {/* Login route */}
+        <Route
+          path="/login"
+          element={user ? <Navigate to="/" replace /> : <LoginPage />}
+        />
 
-      {/* Protected routes*/}
-      <Route
-        path="/"
-        element={
-              <ProtectedRoute>
-            <Layout activePage="dashboard">
-              <DashboardPage />
-            </Layout>
+        {/* Admin Dashboard */}
+        <Route
+          path="/"
+          element={
+            <ProtectedRoute adminOnly={true}>
+              <Layout activePage="dashboard">
+                <DashboardPage />
+              </Layout>
             </ProtectedRoute>
-        
-        }
-      />
-      <Route
-        path="/employees"
-        element={
-          <ProtectedRoute>
-            <Layout activePage="employees">
-              <EmployeePage />
-            </Layout>
+          }
+        />
+
+        {/* Employees Page (Admin Only) */}
+        <Route
+          path="/employees"
+          element={
+            <ProtectedRoute adminOnly={true}>
+              <Layout activePage="employees">
+                <EmployeePage />
+              </Layout>
             </ProtectedRoute>
-         
-        }
-      />
-      <Route
-        path="/leave"
-        element={
-          
-            <Layout activePage="leave">
-              <LeavePage />
-            </Layout>
-          
-        }
-      />
-      <Route
-        path="/add-new-user"
-        element={
-       <ProtectedRoute>
-            <Layout activePage="employees">
-              <AddNewUserPage />
-            </Layout>
+          }
+        />
+
+        {/* Add New User Page (Admin Only) */}
+        <Route
+          path="/add-new-user"
+          element={
+            <ProtectedRoute adminOnly={true}>
+              <Layout activePage="employees">
+                <AddNewUserPage />
+              </Layout>
             </ProtectedRoute>
-        
-        }
-      />
-      
-    </Routes>
-    <Toaster position="top-center" toastOptions={{ duration: 3000 }} />
+          }
+        />
+
+        {/* Leave Page (Admin Only) */}
+        <Route
+          path="/leave"
+          element={
+            <ProtectedRoute adminOnly={true}>
+              <Layout activePage="leave">
+                <LeavePage />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Employee Profile Page */}
+        <Route
+          path="/profile"
+          element={
+            <ProtectedRoute>
+              <EmployeeProfile />
+            </ProtectedRoute>
+          }
+        />
+      </Routes>
+
+      <Toaster position="top-center" toastOptions={{ duration: 3000 }} />
     </>
-    
   );
 }
 
