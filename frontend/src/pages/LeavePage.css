@@ -133,10 +133,62 @@
 .chevron-icon { font-size: 12px; transition: transform 0.2s ease; }
 .chevron-icon.rotated { transform: rotate(180deg); }
 
+/* ===================== Responsive Table → Card ===================== */
 @media (max-width: 768px) {
-  .leave-title { font-size: 24px; }
-  .leave-table { font-size: 12px; }
-  .leave-table th, .leave-table td { padding: 12px 8px; }
+  .leave-table-container {
+    overflow-x: hidden;
+  }
+
+  .leave-table {
+    display: block;
+    width: 100%;
+    border: none;
+  }
+
+  .leave-table thead {
+    display: none; /* hide headers */
+  }
+
+  .leave-table tbody {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+  }
+
+  .leave-table tr {
+    display: block;
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    padding: 15px;
+  }
+
+  .leave-table td {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0;
+    font-size: 14px;
+    border: none;
+    border-bottom: 1px solid #eee;
+  }
+
+  .leave-table td:last-child {
+    border-bottom: none;
+  }
+
+  .leave-table td::before {
+    content: attr(data-label);
+    font-weight: 600;
+    text-transform: uppercase;
+    color: #444;
+    margin-right: 10px;
+  }
+
+  /* Action buttons in mobile card */
+  .status-group {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 10px;
+  }
 }
-
-

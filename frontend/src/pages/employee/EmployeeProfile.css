@@ -1,3 +1,4 @@
+/* ✅ Base Styles */
 .profile-container {
   padding: 20px;
   font-family: 'Segoe UI', sans-serif;
@@ -21,6 +22,7 @@
   padding: 20px;
   margin: 15px 0;
   gap: 20px;
+  flex-wrap: wrap; /* ✅ allows wrap on smaller screens */
 }
 
 .profile-photo-section {
@@ -41,7 +43,6 @@
   margin-top: 8px;
   font-size: 12px;
   margin-left: 30px;
-
   color: #003366;
   cursor: pointer;
   text-decoration: underline;
@@ -50,7 +51,12 @@
 .profile-info {
   flex: 1;
   max-width: 800px;   /* medium box width */
-  margin-left: 90px;
+  margin-left: 90px;  /* ✅ Desktop spacing */
+
+  /* Slide-in effect */
+  opacity: 0;
+  transform: translateX(50px);
+  animation: slideInRight 0.6s ease-out forwards;
 }
 
 /* Rows & Inputs */
@@ -59,6 +65,7 @@
   align-items: center;
   margin-bottom: 10px;
   gap: 10px;
+  flex-wrap: wrap; /* ✅ allows stacking */
 }
 
 .row label {
@@ -67,7 +74,8 @@
 }
 
 .row input,
-textarea {
+textarea,
+select {
   flex: 1;
   padding: 6px;
   border: 1px solid #ccc;
@@ -121,6 +129,7 @@ textarea {
 .leaves-table {
   width: 100%;
   border-collapse: collapse;
+  font-size: 14px;
 }
 
 .leaves-table th,
@@ -135,10 +144,11 @@ textarea {
   font-weight: bold;
 }
 
-/* Inputs in sections (not profile card) */
+/* Inputs inside sections */
 .section .row input,
-.section .row textarea {
-  flex: 0 0 60%;      /* medium width */
+.section .row textarea,
+.section .row select {
+  flex: 0 0 60%;
   max-width: 350px;
   padding: 6px;
   border: 1px solid #ccc;
@@ -151,17 +161,18 @@ textarea {
   display: flex;
   align-items: center;
   gap: 15px;
+  flex-wrap: wrap;
 }
 
 .radio-group label {
-  width: 140px;       /* keep left label aligned */
+  width: 140px;
   flex-shrink: 0;
   font-weight: 500;
 }
 
 .radio-group div {
   display: flex;
-  gap: 25px;          /* space between each option */
+  gap: 25px;
 }
 
 .radio-group div label {
@@ -172,14 +183,7 @@ textarea {
   width: auto;
 }
 
-/* Profile Info Slide-In Animation */
-.profile-info {
-  flex: 1;
-  opacity: 0;
-  transform: translateX(50px);
-  animation: slideInRight 0.6s ease-out forwards;
-}
-
+/* ✅ Slide-In Animation */
 @keyframes slideInRight {
   from {
     opacity: 0;
@@ -188,5 +192,64 @@ textarea {
   to {
     opacity: 1;
     transform: translateX(0);
+  }
+}
+
+/* 🌍 Responsive Design */
+
+/* Tablets */
+@media (max-width: 992px) {
+  .profile-card {
+    flex-direction: column;
+    align-items: center;
+  }
+  .profile-photo {
+    margin-left: 0;
+  }
+  .upload-label {
+    margin-left: 0;
+  }
+  .profile-info {
+    margin-left: 0;   /* ✅ remove extra left margin */
+    max-width: 100%;
+  }
+  .row label {
+    width: 120px;
+  }
+  .section .row input,
+  .section .row textarea,
+  .section .row select {
+    flex: 1;
+    max-width: 100%;
+  }
+}
+
+/* Mobile */
+@media (max-width: 600px) {
+  .row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .row label {
+    width: 100%;
+    margin-bottom: 5px;
+  }
+  .row input,
+  textarea,
+  select {
+    width: 100%;
+  }
+  .section .row input,
+  .section .row textarea,
+  .section .row select {
+    width: 100%;
+    max-width: 100%;
+  }
+  .leaves-table {
+    font-size: 12px;
+  }
+  .btn, .btn-small {
+    width: 100%;
+    text-align: center;
   }
 }

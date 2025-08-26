@@ -1,5 +1,3 @@
-
-
 .employee-page {
   background-color: white;
   min-height: 100vh;
@@ -7,6 +5,7 @@
   font-family: 'Segoe UI', sans-serif;
 }
 
+/* ---------- HEADER ---------- */
 .employee-header {
   text-align: center;
   margin-bottom: 30px;
@@ -21,6 +20,7 @@
   text-transform: uppercase;
 }
 
+/* ---------- ACTION BUTTONS ---------- */
 .employee-actions {
   display: flex;
   justify-content: space-between;
@@ -28,6 +28,7 @@
   margin-bottom: 30px;
   padding: 0 20px;
   gap: 20px;
+  flex-wrap: wrap; /* makes it responsive */
 }
 
 .filter-dropdown {
@@ -35,21 +36,7 @@
   flex: 0 0 auto;
 }
 
-.add-employee-btn {
-  background-color: #B3C8CF;
-  border: none;
-  padding: 12px 24px;
-  border-radius: 8px;
-  font-size: 16px;
-  font-weight: 600;
-  color: #333;
-  cursor: pointer;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  transition: all 0.3s ease;
-  flex: 0 0 auto;
-  white-space: nowrap;
-}
-
+.add-employee-btn,
 .filter-btn {
   background-color: #B3C8CF;
   border: none;
@@ -59,17 +46,21 @@
   font-weight: 600;
   color: #333;
   cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 8px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   transition: all 0.3s ease;
   white-space: nowrap;
 }
 
+.add-employee-btn:hover,
 .filter-btn:hover {
   background-color: #A3B8BF;
   transform: translateY(-1px);
+}
+
+.filter-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .chevron-icon {
@@ -81,12 +72,7 @@
   transform: rotate(180deg);
 }
 
-.add-employee-btn:hover {
-  background-color: #A3B8BF;
-  transform: translateY(-1px);
-}
-
-/* Dropdown Menu Styles */
+/* ---------- DROPDOWN ---------- */
 .dropdown-menu {
   position: absolute;
   top: 100%;
@@ -118,10 +104,11 @@
   background-color: #F8F9FA;
 }
 
+/* ---------- TABLE ---------- */
 .employee-table-container {
   background-color: white;
   border-radius: 12px;
-  overflow: hidden;
+  overflow-x: auto; /* scroll on small screens */
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   margin: 0 20px;
 }
@@ -130,6 +117,7 @@
   width: 100%;
   border-collapse: collapse;
   font-size: 14px;
+  min-width: 600px; /* prevent breaking too much */
 }
 
 .employee-table thead {
@@ -151,21 +139,20 @@
   vertical-align: middle;
 }
 
-/*for alternate row color*/
-/* In EmployeePage.css */
+/* alternate row colors */
 .employee-table tbody tr.even-row {
-  background-color: white;  /* White */
+  background-color: #fff;
 }
 
 .employee-table tbody tr.odd-row {
-  background-color: white;  /* White */
+  background-color: #f9f9f9;
 }
 
 .employee-table tbody {
-  font-family:  "Roboto Condensed", sans-serif;
-
+  font-family: "Roboto Condensed", sans-serif;
 }
 
+/* ---------- ICON ---------- */
 .profile-icon {
   display: flex;
   align-items: center;
@@ -178,6 +165,7 @@
   font-size: 16px;
 }
 
+/* ---------- DELETE BUTTON ---------- */
 .delete-btn {
   background-color: #DC3545;
   color: white;
@@ -204,24 +192,57 @@
   font-size: 10px;
 }
 
-/* Responsive design */
-@media (max-width: 768px) {
+/* ---------- RESPONSIVE ---------- */
+@media (max-width: 992px) {
   .employee-actions {
     flex-direction: column;
-    gap: 15px;
     align-items: stretch;
   }
-  
+
+  .employee-title {
+    font-size: 26px;
+  }
+}
+
+@media (max-width: 768px) {
   .employee-table {
     font-size: 12px;
+    min-width: 500px;
   }
-  
-  .employee-table th,
-  .employee-table td {
-    padding: 12px 8px;
+
+  .add-employee-btn,
+  .filter-btn {
+    font-size: 14px;
+    padding: 10px 16px;
   }
-  
+
+  .delete-btn {
+    width: 80px;
+    height: 34px;
+    font-size: 11px;
+  }
+}
+
+@media (max-width: 576px) {
   .employee-title {
-    font-size: 24px;
+    font-size: 22px;
   }
-} 
+
+  .employee-actions {
+    gap: 10px;
+    padding: 0;
+  }
+
+  .employee-table-container {
+    margin: 0 10px;
+  }
+
+  .employee-table {
+    min-width: 400px;
+  }
+
+  .delete-btn {
+    width: 70px;
+    font-size: 10px;
+  }
+}

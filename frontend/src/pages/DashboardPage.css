@@ -9,4 +9,30 @@
   display: flex;
   gap: 20px;
   flex-wrap: wrap;
+  justify-content: center; /* keeps items centered when wrapping */
+}
+
+/* Desktop (default) - 3 or 4 items in a row depending on card width */
+
+/* Tablets */
+@media (max-width: 992px) {
+  .dashboard-content {
+    justify-content: space-around;
+  }
+  .dashboard-content > * {
+    flex: 1 1 45%; /* two items per row */
+    max-width: 45%;
+  }
+}
+
+/* Mobiles */
+@media (max-width: 600px) {
+  .dashboard-content {
+    flex-direction: column;
+    align-items: center;
+  }
+  .dashboard-content > * {
+    flex: 1 1 100%; /* full width */
+    max-width: 100%;
+  }
 }

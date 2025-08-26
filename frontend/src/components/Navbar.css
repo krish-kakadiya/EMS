@@ -21,16 +21,40 @@
   background-color: #C4DAD2;
   color: black;
   border: none;
-  padding: 10px 25px;
-  font-size: larger;
+  padding: 8px 18px;  /* smaller default */
+  font-size: 14px;
   font-weight: bold;
   cursor: pointer;
-  border-radius: 8px;
+  border-radius: 6px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   transition: all 0.3s ease;
+  white-space: nowrap; /* keeps text in one line */
 }
 
 .logout-btn:hover {
   background-color: #abbdc3;
   transform: scale(1.05);
+}
+
+/* Responsive tweaks */
+@media (max-width: 768px) {
+  .navbar {
+    padding: 10px 15px;
+  }
+
+  .navbar-title {
+    font-size: 16px;
+  }
+
+  .logout-btn {
+    padding: 6px 12px;
+    font-size: 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .logout-btn {
+    padding: 5px 10px;
+    font-size: 11px;
+  }
 }

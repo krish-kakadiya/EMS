@@ -107,9 +107,12 @@ const EmployeeProfile = () => {
         <div className="row"><label>ENDING DATE:</label><input type="date" /></div>
         <div className="row radio-group">
           <label>REASON:</label>
-          <button className="btn-small">MEDICAL</button>
-          <button className="btn-small">PERSONAL</button>
-          <button className="btn-small">OTHER</button>
+          <select>
+            <option value="">Select Reason</option>
+            <option value="medical">Medical</option>
+            <option value="personal">Personal</option>
+            <option value="other">Other</option>
+          </select>
         </div>
         <button className="btn">APPLY</button>
       </div>

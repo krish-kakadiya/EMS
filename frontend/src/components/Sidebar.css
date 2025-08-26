@@ -1,3 +1,4 @@
+/* ===== Your Base Styles (unchanged) ===== */
 .sidebar {
   background-color: #89A8B2;
   width: 260px;
@@ -34,20 +35,89 @@
 }
 
 .sidebar-item.active {
-  background-color:rgba(255, 255, 255, 0.5);
+  background-color: rgba(255, 255, 255, 0.5);
   transform: translateY(-1.5px);
   box-shadow: 0 6px 15px rgba(0, 0, 0, 0.35);
 }
 
-.sidebar-icon {
-  font-size: 24px;
-}
+.sidebar-icon { font-size: 24px; }
 
 .sidebar-item span,
 .sidebar-icon {
   transition: color 0.3s ease, transform 0.3s ease;
 }
 
-.sidebar-item:hover .sidebar-icon {
-  transform: scale(1.1);
+.sidebar-item:hover .sidebar-icon { transform: scale(1.1); }
+
+/* ===== Responsive Enhancements ===== */
+
+/* Tablet: gently shrink */
+@media (max-width: 992px) {
+  .sidebar {
+    width: 200px;
+    padding: 18px 10px;
+    gap: 14px;
+  }
+  .sidebar-item {
+    font-size: 16px;
+    padding: 12px 10px;
+    gap: 12px;
+  }
+  .sidebar-icon { font-size: 20px; }
+}
+
+/* Mobile: turn into a slim bottom nav */
+@media (max-width: 600px) {
+  /* make room so content isn't hidden behind fixed bar */
+  body { padding-bottom: 58px; }
+
+  .sidebar {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    width: 100%;
+    height: 52px !important;          /* force slim height */
+    padding: 4px 6px !important;       /* tight padding */
+    border-radius: 0;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-around;
+    gap: 8px !important;
+    background: rgba(137,168,178,0.95);
+    backdrop-filter: blur(8px);
+    box-shadow: 0 -4px 12px rgba(0,0,0,0.06);
+    z-index: 1000;
+  }
+
+  .sidebar-item {
+    flex: 1 1 0;
+    min-width: 0;
+    margin: 0;
+    padding: 4px !important;           /* smaller touch target padding */
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 2px;
+    font-size: 11px !important;
+    font-weight: 500;
+    background: transparent !important;
+    border-radius: 8px;
+    box-shadow: none !important;
+    border: 1px solid rgba(255,255,255,0.25);
+  }
+
+  .sidebar-icon { font-size: 18px !important; line-height: 1; }
+
+  .sidebar-item.active {
+    background: rgba(255,255,255,0.22) !important;
+    box-shadow: none !important;
+  }
+}
+
+/* Very small phones: icons only, even slimmer */
+@media (max-width: 400px) {
+  .sidebar-item span { display: none; }
+  .sidebar { height: 48px !important; }
+  body { padding-bottom: 50px; }
 }
