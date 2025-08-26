@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import "./EmployeeProfile.css";
+import Navbar from "../../components/Navbar";
 
 const EmployeeProfile = () => {
   const [profileImg, setProfileImg] = useState(null);
@@ -12,7 +13,8 @@ const EmployeeProfile = () => {
 
   return (
     <div className="profile-container">
-      <h2 className="section-title">MY PROFILE</h2>
+      {/* <h2 className="section-title">MY PROFILE</h2> */}
+      <Navbar />
 
       <div className="profile-card">
         {/* Profile Photo */}
