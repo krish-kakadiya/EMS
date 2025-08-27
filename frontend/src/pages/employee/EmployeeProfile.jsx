@@ -1,15 +1,26 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import "./EmployeeProfile.css";
 import Navbar from "../../components/Navbar";
+import { useSelector } from "react-redux";
+import { useDispatch } from "react-redux";
 
 const EmployeeProfile = () => {
   const [profileImg, setProfileImg] = useState(null);
+  const { user, loading } = useSelector((state) => state.auth);
+  const dispatch = useDispatch();
 
   const handleImageChange = (e) => {
     if (e.target.files && e.target.files[0]) {
       setProfileImg(URL.createObjectURL(e.target.files[0]));
     }
   };
+  useEffect(() => {
+  if (!user) {
+    dispatch(getCurrentUser());
+    }
+    console.log(user);
+  }, [dispatch, user]);
+
 
   return (
     <div className="profile-container">
@@ -39,34 +50,39 @@ const EmployeeProfile = () => {
         <div className="profile-info">
           <div className="row">
             <label>EMP_ID:</label>
-            <input type="text" value="EMP1" disabled/>
+            <input type="text" value={user?.employeeId || ""} disabled />
           </div>
           <div className="row">
             <label>NAME:</label>
-            <input type="text" value="HADIYA HARDIK" disabled/>
+            <input type="text" value={user?.name || ""} disabled />
           </div>
           <div className="row">
             <label>DEPARTMENT:</label>
-            <input type="text" value="FRONTEND DEVELOPMENT" disabled/>
+            <input type="text" value={user?.department || ""} disabled />
           </div>
           <div className="row">
             <label>E-MAIL:</label>
-            <input type="email" value="hardikhadiya21@gmail.com" disabled/>
+            <input type="email" value={user?.email || ""} disabled />
           </div>
           <div className="row">
             <label>PASSWORD:</label>
-            <input type="password" value="*****" readOnly/>
+            <input type="password" value="*****" readOnly />
             <button className="btn-small">CHANGE PASSWORD</button>
           </div>
           <div className="row">
             <label>ROLE:</label>
-            <input type="text" value="EMPLOYEE" disabled/>
+            <input type="text" value={user?.role || ""} disabled />
           </div>
           <div className="row">
             <label>SALARY:</label>
-            <input type="text" value="XXXX" disabled/>
+            <input
+              type="text"
+              value={user?.salary?.basic ? `₹${user.salary.basic}` : ""}
+              disabled
+            />
           </div>
         </div>
+
       </div>
 
       {/* Personal Information */}

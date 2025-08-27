@@ -1,5 +1,6 @@
 import User from "../model/user.model.js";
 import Counter from "../model/counter.model.js";
+import Salary from "../model/salary.model.js";
 
 // const createAdmin = async (req, res) => {
 //   try {
@@ -130,26 +131,36 @@ export const login = async (req,res)=>{
   }
 }
 
+
 export const me = async (req, res) => {
   try {
-    const user = await User.findById(req.user.id).select('-password');
+    // Fetch user (excluding password)
+    const user = await User.findById(req.user.id).select("-password");
     if (!user) {
       return res.status(404).json({
         success: false,
-        message: 'User not found',
+        message: "User not found",
       });
     }
+
+    // Fetch salary linked to this user
+    const salary = await Salary.findOne({ user: user._id });
+
     res.json({
       success: true,
-      user,
+      user: {
+        ...user.toObject(),
+        salary: salary ? { basic: salary.basic } : null,
+      },
     });
   } catch (error) {
     res.status(500).json({
       success: false,
-      message: 'Server error',
+      message: "Server error",
     });
   }
-}
+};
+
 
 export const logout =  (req, res) => {
   res.clearCookie('token', {
