@@ -253,3 +253,32 @@ textarea {
     text-align: center;
   }
 }
+
+.password-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.password-input {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.password-input input {
+  padding: 6px;
+  font-size: 14px;
+  width: 120px;
+}
+
+.eye-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 18px; /* size of icon */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+

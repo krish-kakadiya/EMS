@@ -3,9 +3,12 @@ import "./EmployeeProfile.css";
 import Navbar from "../../components/Navbar";
 import { useSelector } from "react-redux";
 import { useDispatch } from "react-redux";
+import { FaEye, FaEyeSlash } from "react-icons/fa";
+
 
 const EmployeeProfile = () => {
   const [profileImg, setProfileImg] = useState(null);
+  const [showPassword, setShowPassword] = useState(false); 
   const { user, loading } = useSelector((state) => state.auth);
   const dispatch = useDispatch();
 
@@ -14,13 +17,13 @@ const EmployeeProfile = () => {
       setProfileImg(URL.createObjectURL(e.target.files[0]));
     }
   };
+
   useEffect(() => {
-  if (!user) {
-    dispatch(getCurrentUser());
+    if (!user) {
+      dispatch(getCurrentUser());
     }
     console.log(user);
   }, [dispatch, user]);
-
 
   return (
     <div className="profile-container">
@@ -64,11 +67,28 @@ const EmployeeProfile = () => {
             <label>E-MAIL:</label>
             <input type="email" value={user?.email || ""} disabled />
           </div>
-          <div className="row">
+
+          {/*  Password with Eye Toggle */}
+          <div className="row password-row">
             <label>PASSWORD:</label>
-            <input type="password" value="*****" readOnly />
-            <button className="btn-small">CHANGE PASSWORD</button>
+            <div className="password-input">
+              <input
+                type={showPassword ? "text" : "password"}
+                value="*****"
+                readOnly
+              />
+              <button
+                type="button"
+                className="eye-btn"
+                onClick={() => setShowPassword(!showPassword)}
+              >
+                {showPassword ? <FaEye /> : <FaEyeSlash />}
+              </button>
+              <button className="btn-small">CHANGE PASSWORD</button>
+            </div>
           </div>
+
+
           <div className="row">
             <label>ROLE:</label>
             <input type="text" value={user?.role || ""} disabled />
@@ -82,7 +102,6 @@ const EmployeeProfile = () => {
             />
           </div>
         </div>
-
       </div>
 
       {/* Personal Information */}
@@ -91,20 +110,40 @@ const EmployeeProfile = () => {
         <div className="row radio-group">
           <label>GENDER:</label>
           <div className="radio-options">
-            <label><input type="radio" name="gender" /> Male</label>
-            <label><input type="radio" name="gender" /> Female</label>
+            <label>
+              <input type="radio" name="gender" /> Male
+            </label>
+            <label>
+              <input type="radio" name="gender" /> Female
+            </label>
           </div>
         </div>
 
-        <div className="row"><label>DOB:</label><input type="date" /></div>
-        <div className="row"><label>NO:</label><input type="text" /></div>
-        <div className="row"><label>ADDRESS:</label><textarea /></div>
-        <div className="row"><label>JOINING DATE:</label><input type="date" /></div>
+        <div className="row">
+          <label>DOB:</label>
+          <input type="date" />
+        </div>
+        <div className="row">
+          <label>NO:</label>
+          <input type="text" />
+        </div>
+        <div className="row">
+          <label>ADDRESS:</label>
+          <textarea />
+        </div>
+        <div className="row">
+          <label>JOINING DATE:</label>
+          <input type="date" />
+        </div>
         <div className="row radio-group">
           <label>MARITAL STATUS:</label>
           <div className="options">
-            <label><input type="radio" name="marital" /> Unmarried</label>
-            <label><input type="radio" name="marital" /> Married</label>
+            <label>
+              <input type="radio" name="marital" /> Unmarried
+            </label>
+            <label>
+              <input type="radio" name="marital" /> Married
+            </label>
           </div>
         </div>
         <button className="btn">UPDATE</button>
@@ -113,14 +152,23 @@ const EmployeeProfile = () => {
       {/* Attendance */}
       <div className="section">
         <h3>ATTENDANCE REPORT</h3>
-        <div className="row"><label>ATTENDANCE:</label><input type="text" /></div>
+        <div className="row">
+          <label>ATTENDANCE:</label>
+          <input type="text" />
+        </div>
       </div>
 
       {/* Apply Leaves */}
       <div className="section">
         <h3>APPLY LEAVES</h3>
-        <div className="row"><label>STARTING DATE:</label><input type="date" /></div>
-        <div className="row"><label>ENDING DATE:</label><input type="date" /></div>
+        <div className="row">
+          <label>STARTING DATE:</label>
+          <input type="date" />
+        </div>
+        <div className="row">
+          <label>ENDING DATE:</label>
+          <input type="date" />
+        </div>
         <div className="row radio-group">
           <label>REASON:</label>
           <select>
