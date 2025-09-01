@@ -6,14 +6,14 @@ const protectedRoutes = async (req, res, next) => {
     const token = req.cookies.token;
 
     if (!token) {
-      return res.status(401).json({  // ✅ Fixed the misplaced `.json()`
+      return res.status(401).json({  
         success: false,
         message: "No token provided",
       });
     }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = decoded;  // Attach decoded payload (e.g. id, role) to request
+    req.user = decoded; 
     next();
 
   } catch (error) {
