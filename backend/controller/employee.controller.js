@@ -2,6 +2,8 @@
   import Salary from "../model/salary.model.js";
   import Counter from "../model/counter.model.js";
   import Profile from "../model/profile.model.js";
+import ExcelJS from "exceljs";
+
 
   const createEmployee = async (req, res) => {
     try {
@@ -228,6 +230,82 @@
     });
   }
 };
+
+// controllers/employeeController.js
+
+export const exportEmployees = async (req, res) => {
+  try {
+    const employees = await User.aggregate([
+      { $match: { role: { $ne: "admin" } } },
+      {
+        $lookup: {
+          from: "salaries",
+          localField: "_id",
+          foreignField: "user",
+          as: "salary",
+        },
+      },
+      {
+        $unwind: { path: "$salary", preserveNullAndEmptyArrays: true },
+      },
+      {
+        $project: {
+          _id: 1,
+          employeeId: 1,
+          name: 1,
+          email: 1,
+          role: 1,
+          department: 1,
+          "salary.basic": 1,
+        },
+      },
+    ]);
+
+    // Create workbook & worksheet
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet("Employees");
+
+    // Add header row
+    worksheet.columns = [
+      { header: "Employee ID", key: "employeeId", width: 15 },
+      { header: "Name", key: "name", width: 20 },
+      { header: "Email", key: "email", width: 25 },
+      { header: "Role", key: "role", width: 15 },
+      { header: "Department", key: "department", width: 20 },
+      { header: "Basic Salary", key: "salary", width: 15 },
+    ];
+
+    // Add employee rows
+    employees.forEach((emp) => {
+      worksheet.addRow({
+        employeeId: emp.employeeId,
+        name: emp.name,
+        email: emp.email,
+        role: emp.role,
+        department: emp.department,
+        salary: emp.salary?.basic || "N/A",
+      });
+    });
+
+    // Set response headers
+    res.setHeader(
+      "Content-Type",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    );
+    res.setHeader("Content-Disposition", "attachment; filename=employees.xlsx");
+
+    // Write to response
+    await workbook.xlsx.write(res);
+    res.end();
+  } catch (error) {
+    console.error("Error exporting employees:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error while exporting employees",
+    });
+  }
+};
+
 
 
   export { createEmployee, getAllEmployees, deleteEmployee, monthlyPay };

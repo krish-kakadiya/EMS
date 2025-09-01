@@ -57,6 +57,32 @@ export const getMonthlyPay = createAsyncThunk(
   }
 );
 
+// employeeSlice.js
+export const exportEmployees = createAsyncThunk(
+  "employees/export",
+  async (_, { rejectWithValue }) => {
+    try {
+      const res = await api.get("/employees/export", {
+        responseType: "blob", // important for file download
+      });
+
+      // Create download link
+      const url = window.URL.createObjectURL(new Blob([res.data]));
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", "employees.xlsx");
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+
+      return true;
+    } catch (error) {
+      return rejectWithValue(error.response?.data || error.message);
+    }
+  }
+);
+
+
 // -------------------------------------------------
 // Slice
 // -------------------------------------------------

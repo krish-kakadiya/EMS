@@ -1,13 +1,12 @@
 import React, { useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { getAllEmployees, getMonthlyPay } from "../redux/slices/employeeSlice"; 
+import { getAllEmployees, getMonthlyPay, exportEmployees } from "../redux/slices/employeeSlice"; 
 import {
   DollarSign,
   User,
   Download,
   Plus,
   Briefcase,
-  Clock,
 } from "lucide-react";
 import {
   BarChart,
@@ -37,6 +36,10 @@ const DashboardPage = () => {
     dispatch(getMonthlyPay());
   }, [dispatch]);
 
+  const handleExport = () => {
+    dispatch(exportEmployees()); // ✅ export Excel
+  };
+
   const totalEmployees = employees.length;
 
   // Group by department
@@ -57,7 +60,7 @@ const DashboardPage = () => {
     if (salary >= 30000 && salary <= 50000) salaryDistribution["30-50K"]++;
     else if (salary > 50000 && salary <= 70000) salaryDistribution["50-70K"]++;
     else if (salary > 70000 && salary <= 85000) salaryDistribution["70-85K"]++;
-    else if (salary > 85000) salaryDistribution["85K+"]++;
+    else if (salary > 85000) salaryDistribution["85K"]++;
   });
 
   const salaryDistributionData = Object.entries(salaryDistribution).map(
@@ -96,7 +99,8 @@ const DashboardPage = () => {
           </span>
         </div>
         <div className="header-actions">
-          <button className="btn btn-primary">
+          {/* ✅ Export Button integrated here */}
+          <button onClick={handleExport} className="btn btn-primary">
             <Download size={16} /> Export Report
           </button>
           <button className="btn btn-success">
@@ -130,7 +134,6 @@ const DashboardPage = () => {
           subtitle="Active departments"
           color="orange"
         />
-        
       </div>
 
       {/* Department Chart */}
@@ -214,7 +217,7 @@ const DashboardPage = () => {
 };
 
 // Card Component
-const DashboardCard = ({ icon, title, value, subtitle, trend, trendPositive, color }) => (
+const DashboardCard = ({ icon, title, value, subtitle, color }) => (
   <div className={`card card-${color}`}>
     <div className="card-header">
       <div className="icon">{icon}</div>

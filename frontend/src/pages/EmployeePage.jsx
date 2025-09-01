@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
-import { FaChevronDown, FaUser, FaTrash } from "react-icons/fa";
+import { FaChevronDown, FaUser, FaTrash, FaPlus, FaSearch } from "react-icons/fa";
 import {
   getAllEmployees,
   deleteEmployee,
@@ -13,6 +13,7 @@ import "./EmployeePage.css";
 const EmployeePage = () => {
   const [selectedFilter, setSelectedFilter] = useState("ALL");
   const [showDropdown, setShowDropdown] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
 
   const navigate = useNavigate();
   const dispatch = useDispatch();
@@ -44,7 +45,6 @@ const EmployeePage = () => {
     }
   };
 
-
   // ✅ Handle filter dropdown
   const handleFilterChange = (filter) => {
     setSelectedFilter(filter);
@@ -56,107 +56,154 @@ const EmployeePage = () => {
     navigate("/add-new-user");
   };
 
-  // ✅ Filtering employees by department
-  const filteredEmployees =
-    selectedFilter === "ALL"
-      ? employees
-      : employees.filter((employee) => {
-          if (selectedFilter === "FRONTEND") {
-            return employee.department.includes("FRONTEND");
-          } else if (selectedFilter === "BACKEND") {
-            return employee.department.includes("BACKEND");
-          } else if (selectedFilter === "FULL STACK") {
-            return employee.department.includes("FULL STACK");
-          } else if (selectedFilter === "UI/UX DESIGN") {
-            return employee.department.includes("UI/UX DESIGN");
-          } else if (selectedFilter === "Q/A TESTER") {
-            return employee.department.includes("Q/A TESTER");
-          }
-          return false;
-        });
+  // ✅ Filtering employees by department and search term
+  const filteredEmployees = employees.filter((employee) => {
+    const matchesSearch = employee.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         employee.employeeId.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    if (selectedFilter === "ALL") {
+      return matchesSearch;
+    } else {
+      const matchesDepartment = (() => {
+        if (selectedFilter === "FRONTEND") {
+          return employee.department.includes("FRONTEND");
+        } else if (selectedFilter === "BACKEND") {
+          return employee.department.includes("BACKEND");
+        } else if (selectedFilter === "FULL STACK") {
+          return employee.department.includes("FULL STACK");
+        } else if (selectedFilter === "UI/UX DESIGN") {
+          return employee.department.includes("UI/UX DESIGN");
+        } else if (selectedFilter === "Q/A TESTER") {
+          return employee.department.includes("Q/A TESTER");
+        }
+        return false;
+      })();
+      return matchesSearch && matchesDepartment;
+    }
+  });
 
   return (
     <div className="employee-page">
       {/* ---------- Header ---------- */}
       <div className="employee-header">
-        <h1 className="employee-title">MANAGE EMPLOYEES</h1>
+        <div className="header-content">
+          <h1 className="employee-title">Employee Management</h1>
+          <p className="employee-subtitle">Manage your team members and their information</p>
+        </div>
       </div>
 
       {/* ---------- Actions ---------- */}
       <div className="employee-actions">
-        <div className="filter-dropdown">
-          <button
-            className="filter-btn"
-            onClick={() => setShowDropdown(!showDropdown)}
-          >
-            {selectedFilter}
-            <FaChevronDown
-              className={`chevron-icon ${showDropdown ? "rotated" : ""}`}
+        <div className="left-actions">
+          <div className="search-container">
+            <FaSearch className="search-icon" />
+            <input
+              type="text"
+              placeholder="Search employees..."
+              className="search-input"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
             />
-          </button>
+          </div>
+          
+          <div className="filter-dropdown">
+            <button
+              className="filter-btn"
+              onClick={() => setShowDropdown(!showDropdown)}
+            >
+              <span>Filter: {selectedFilter}</span>
+              <FaChevronDown
+                className={`chevron-icon ${showDropdown ? "rotated" : ""}`}
+              />
+            </button>
 
-          {showDropdown && (
-            <div className="dropdown-menu">
-              <div
-                className="dropdown-item"
-                onClick={() => handleFilterChange("ALL")}
-              >
-                ALL
+            {showDropdown && (
+              <div className="dropdown-menu">
+                <div
+                  className="dropdown-item"
+                  onClick={() => handleFilterChange("ALL")}
+                >
+                  All Departments
+                </div>
+                <div
+                  className="dropdown-item"
+                  onClick={() => handleFilterChange("FRONTEND")}
+                >
+                  Frontend Developer
+                </div>
+                <div
+                  className="dropdown-item"
+                  onClick={() => handleFilterChange("BACKEND")}
+                >
+                  Backend Developer
+                </div>
+                <div
+                  className="dropdown-item"
+                  onClick={() => handleFilterChange("FULL STACK")}
+                >
+                  Full Stack Developer
+                </div>
+                <div
+                  className="dropdown-item"
+                  onClick={() => handleFilterChange("UI/UX DESIGN")}
+                >
+                  UI/UX Designer
+                </div>
+                <div
+                  className="dropdown-item"
+                  onClick={() => handleFilterChange("Q/A TESTER")}
+                >
+                  QA Tester
+                </div>
               </div>
-              <div
-                className="dropdown-item"
-                onClick={() => handleFilterChange("FRONTEND")}
-              >
-                FRONTEND DEVELOPER
-              </div>
-              <div
-                className="dropdown-item"
-                onClick={() => handleFilterChange("BACKEND")}
-              >
-                BACKEND DEVELOPER
-              </div>
-              <div
-                className="dropdown-item"
-                onClick={() => handleFilterChange("FULL STACK")}
-              >
-                FULL STACK DEVELOPER
-              </div>
-              <div
-                className="dropdown-item"
-                onClick={() => handleFilterChange("UI/UX DESIGN")}
-              >
-                UI/UX DESIGNER
-              </div>
-              <div
-                className="dropdown-item"
-                onClick={() => handleFilterChange("Q/A TESTER")}
-              >
-                Q/A TESTER
-              </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
 
         <button className="add-employee-btn" onClick={handleAddNewEmployee}>
-          ADD NEW EMPLOYEE
+          <FaPlus className="btn-icon" />
+          Add New Employee
         </button>
       </div>
 
       {/* ---------- Status Messages ---------- */}
-      {loading && <p>Loading employees...</p>}
-      {error && <p className="error">{error}</p>}
-      {success && <p className="success">{success}</p>}
+      {loading && (
+        <div className="status-message loading-message">
+          <div className="loading-spinner"></div>
+          Loading employees...
+        </div>
+      )}
+      {error && <div className="status-message error-message">{error}</div>}
+      {success && <div className="status-message success-message">{success}</div>}
+
+      {/* ---------- Stats Cards ---------- */}
+      <div className="stats-container">
+        <div className="stat-card">
+          <div className="stat-number">{employees.length}</div>
+          <div className="stat-label">Total Employees</div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-number">{filteredEmployees.length}</div>
+          <div className="stat-label">Filtered Results</div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-number">
+            {new Set(employees.map(emp => emp.department)).size}
+          </div>
+          <div className="stat-label">Departments</div>
+        </div>
+      </div>
 
       {/* ---------- Employee Table ---------- */}
       <div className="employee-table-container">
         <table className="employee-table">
           <thead>
             <tr>
-              <th>EMP ID</th>
-              <th>PROFILE</th>
-              <th>NAME</th>
-              <th>DEPARTMENT</th>
-              <th>ACTION</th>
+              <th>Employee ID</th>
+              <th>Profile</th>
+              <th>Name</th>
+              <th>Department</th>
+              <th>Actions</th>
             </tr>
           </thead>
 
@@ -165,22 +212,32 @@ const EmployeePage = () => {
             {filteredEmployees.map((employee, index) => (
               <tr
                 key={employee._id || `${employee.employeeId}-${index}`}
-                className={index % 2 === 0 ? "even-row" : "odd-row"}
+                className="employee-row"
               >
-                <td>{employee.employeeId}</td>
                 <td>
-                  <div className="profile-icon">
+                  <span className="employee-id">{employee.employeeId}</span>
+                </td>
+                <td>
+                  <div className="profile-avatar">
                     <FaUser />
                   </div>
                 </td>
-                <td>{employee.name}</td>
-                <td>{employee.department}</td>
+                <td>
+                  <span className="employee-name">{employee.name}</span>
+                </td>
+                <td>
+                  <span className="department-badge">
+                    {employee.department}
+                  </span>
+                </td>
                 <td>
                   <button
                     className="delete-btn"
                     onClick={() => handleDelete(employee._id)}
+                    title="Delete Employee"
                   >
-                    <FaTrash /> DELETE
+                    <FaTrash />
+                    Delete
                   </button>
                 </td>
               </tr>
@@ -188,9 +245,21 @@ const EmployeePage = () => {
 
             {/* ✅ No Employees Fallback */}
             {filteredEmployees.length === 0 && !loading && (
-              <tr key="no-employees">
-                <td colSpan="5" style={{ textAlign: "center" }}>
-                  No employees found.
+              <tr className="empty-row">
+                <td colSpan="5">
+                  <div className="empty-state">
+                    <FaUser className="empty-icon" />
+                    <p className="empty-message">
+                      {searchTerm || selectedFilter !== "ALL" 
+                        ? "No employees match your search criteria" 
+                        : "No employees found"}
+                    </p>
+                    {!searchTerm && selectedFilter === "ALL" && (
+                      <button className="empty-action-btn" onClick={handleAddNewEmployee}>
+                        Add Your First Employee
+                      </button>
+                    )}
+                  </div>
                 </td>
               </tr>
             )}

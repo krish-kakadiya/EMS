@@ -24,16 +24,18 @@ const Sidebar = ({ activePage = 'dashboard' }) => {
 
   return (
     <div className="sidebar">
-      {items.map((item, i) => (
-        <div
-          key={i}
-          className={`sidebar-item ${item.key === activePage ? 'active' : ''}`}
-          onClick={() => navigate(item.path)}
-        >
-          <div className="sidebar-icon">{item.icon}</div>
-          <span>{item.label}</span>
-        </div>
-      ))}
+      <div className="sidebar-content">
+        {items.map((item, i) => (
+          <div
+            key={i}
+            className={`sidebar-item ${item.key === activePage ? 'active' : ''}`}
+            onClick={() => navigate(item.path)}
+          >
+            <div className="sidebar-icon">{item.icon}</div>
+            <span>{item.label}</span>
+          </div>
+        ))}
+      </div>
     </div>
   );
 };
