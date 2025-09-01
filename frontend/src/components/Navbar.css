@@ -1,6 +1,8 @@
 /* src/components/Navbar.css */
 .navbar {
-  background-color: #89A8B2;
+  /* background-color: #89A8B2; */
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 35%);
+
   padding: 15px 30px;
   display: flex;
   font-family: 'Segoe UI', sans-serif;
@@ -12,13 +14,13 @@
 
 .navbar-title {
   font-size: 20px;
-  color: white;
+  color: rgb(36, 32, 32);
   font-family: serif;
   font-weight: 600;
 }
 
 .logout-btn {
-  background-color: #C4DAD2;
+  background: rgba(255, 255, 255, 0.7);
   color: black;
   border: none;
   padding: 8px 18px;  /* smaller default */
@@ -32,7 +34,7 @@
 }
 
 .logout-btn:hover {
-  background-color: #abbdc3;
+  background: rgba(255, 255, 255, 0.3);
   transform: scale(1.05);
 }
 

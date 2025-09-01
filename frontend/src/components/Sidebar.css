@@ -1,8 +1,8 @@
 /* ===== Your Base Styles (unchanged) ===== */
 .sidebar {
-  background-color: #89A8B2;
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 70%);
   width: 260px;
-  height: 325px;
+  height: 375px;
   padding: 25px 15px;
   border-radius: 20px;
   display: flex;
@@ -35,7 +35,7 @@
 }
 
 .sidebar-item.active {
-  background-color: rgba(255, 255, 255, 0.5);
+  background: rgba(255, 255, 255, 0.7);
   transform: translateY(-1.5px);
   box-shadow: 0 6px 15px rgba(0, 0, 0, 0.35);
 }

@@ -67,6 +67,10 @@ const EmployeePage = () => {
             return employee.department.includes("BACKEND");
           } else if (selectedFilter === "FULL STACK") {
             return employee.department.includes("FULL STACK");
+          } else if (selectedFilter === "UI/UX DESIGN") {
+            return employee.department.includes("UI/UX DESIGN");
+          } else if (selectedFilter === "Q/A TESTER") {
+            return employee.department.includes("Q/A TESTER");
           }
           return false;
         });
@@ -116,6 +120,18 @@ const EmployeePage = () => {
                 onClick={() => handleFilterChange("FULL STACK")}
               >
                 FULL STACK DEVELOPER
+              </div>
+              <div
+                className="dropdown-item"
+                onClick={() => handleFilterChange("UI/UX DESIGN")}
+              >
+                UI/UX DESIGNER
+              </div>
+              <div
+                className="dropdown-item"
+                onClick={() => handleFilterChange("Q/A TESTER")}
+              >
+                Q/A TESTER
               </div>
             </div>
           )}
