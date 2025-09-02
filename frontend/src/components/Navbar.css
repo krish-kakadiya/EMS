@@ -6,8 +6,8 @@
   font-family: 'Segoe UI', sans-serif;
   justify-content: space-between;
   align-items: center;
-  border-radius: 10px; /* remove rounded corners so it spans full width */
-  margin: 20px;
+  border-radius: 5px; /* remove rounded corners so it spans full width */
+  margin: 0px 20px 0px 20px;
 
   /* FIXED NAVBAR */
   position: fixed;
