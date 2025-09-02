@@ -1,6 +1,8 @@
 import React, { useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { getAllEmployees, getMonthlyPay, exportEmployees } from "../redux/slices/employeeSlice"; 
+import { useNavigate } from "react-router-dom";
+import { getAllEmployees, getMonthlyPay, exportEmployees } from "../redux/slices/employeeSlice";
+import { getAllLeaves } from "../redux/slices/leaveSlice"; // ✅ added
 import {
   DollarSign,
   User,
@@ -24,20 +26,27 @@ import "./DashboardPage.css";
 
 const DashboardPage = () => {
   const dispatch = useDispatch();
+  const navigate = useNavigate();
 
   // Redux state
   const { employees, monthlyPay, loading, error } = useSelector(
     (state) => state.employees
   );
+  const { allLeaves } = useSelector((state) => state.leave); // ✅ real leave data
 
   // Fetch data on mount
   useEffect(() => {
     dispatch(getAllEmployees());
     dispatch(getMonthlyPay());
+    dispatch(getAllLeaves()); // ✅ fetch leaves for admin
   }, [dispatch]);
 
   const handleExport = () => {
     dispatch(exportEmployees()); // ✅ export Excel
+  };
+
+  const handleAddNewEmployee = () => {
+    navigate("/add-new-user");
   };
 
   const totalEmployees = employees.length;
@@ -60,7 +69,7 @@ const DashboardPage = () => {
     if (salary >= 30000 && salary <= 50000) salaryDistribution["30-50K"]++;
     else if (salary > 50000 && salary <= 70000) salaryDistribution["50-70K"]++;
     else if (salary > 70000 && salary <= 85000) salaryDistribution["70-85K"]++;
-    else if (salary > 85000) salaryDistribution["85K"]++;
+    else if (salary > 85000) salaryDistribution["85K+"]++;
   });
 
   const salaryDistributionData = Object.entries(salaryDistribution).map(
@@ -77,10 +86,19 @@ const DashboardPage = () => {
         totalEmployees
       : 0;
 
+  // ✅ Dynamic Leave Status (Admin view)
+  const leaveCounts = allLeaves.reduce(
+    (acc, leave) => {
+      acc[leave.status] = (acc[leave.status] || 0) + 1;
+      return acc;
+    },
+    { pending: 0, approved: 0, rejected: 0 }
+  );
+
   const leaveStatusData = [
-    { name: "Approved", value: 18, color: "#4ade80" },
-    { name: "Pending", value: 7, color: "#fbbf24" },
-    { name: "Rejected", value: 3, color: "#f87171" },
+    { name: "Approved", value: leaveCounts.approved, color: "#4ade80" },
+    { name: "Pending", value: leaveCounts.pending, color: "#fbbf24" },
+    { name: "Rejected", value: leaveCounts.rejected, color: "#f87171" },
   ];
 
   if (loading) return <p>Loading dashboard...</p>;
@@ -99,11 +117,10 @@ const DashboardPage = () => {
           </span>
         </div>
         <div className="header-actions">
-          {/* ✅ Export Button integrated here */}
           <button onClick={handleExport} className="btn btn-primary">
             <Download size={16} /> Export Report
           </button>
-          <button className="btn btn-success">
+          <button onClick={handleAddNewEmployee} className="btn btn-success">
             <Plus size={16} /> Add Employee
           </button>
         </div>
@@ -229,3 +246,4 @@ const DashboardCard = ({ icon, title, value, subtitle, color }) => (
 );
 
 export default DashboardPage;
+  

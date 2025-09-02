@@ -58,8 +58,7 @@ const EmployeePage = () => {
 
   // ✅ Filtering employees by department and search term
   const filteredEmployees = employees.filter((employee) => {
-    const matchesSearch = employee.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         employee.employeeId.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = employee.employeeId.toLowerCase().includes(searchTerm.toLowerCase());
     
     if (selectedFilter === "ALL") {
       return matchesSearch;
@@ -99,7 +98,7 @@ const EmployeePage = () => {
             <FaSearch className="search-icon" />
             <input
               type="text"
-              placeholder="Search employees..."
+              placeholder="Search employees by Id"
               className="search-input"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
