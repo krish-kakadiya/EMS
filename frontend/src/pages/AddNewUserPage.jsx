@@ -23,7 +23,7 @@ const AddNewUserPage = () => {
   const [formData, setFormData] = useState({
     name: "",
     email: "",
-    role: "",
+    role: "employee",
     salary: "",
     department: "",
   });
@@ -103,7 +103,7 @@ const AddNewUserPage = () => {
         setFormData({
           name: "",
           email: "",
-          role: "",
+          role: "employee",
           salary: "",
           department: "",
         });
@@ -199,26 +199,6 @@ const AddNewUserPage = () => {
           <div className="form-section">
             <h3 className="section-title">Professional Information</h3>
             
-            {/* Role */}
-            <div className="form-group">
-              <label htmlFor="role" className="form-label">
-                <FaUserTie className="label-icon" />
-                Role *
-              </label>
-              <select
-                id="role"
-                name="role"
-                value={formData.role}
-                onChange={handleInputChange}
-                className={`form-input ${formErrors.role ? 'error' : ''}`}
-              >
-                <option value="">Select Role</option>
-                <option value="employee">Employee</option>
-                <option value="admin">Admin</option>
-                <option value="hr">HR</option>
-              </select>
-              {formErrors.role && <span className="error-text">{formErrors.role}</span>}
-            </div>
 
             {/* Department */}
             <div className="form-group">
