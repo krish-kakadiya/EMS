@@ -5,6 +5,7 @@ import employeeRoute from './routes/employee.routes.js';
 import cors from 'cors';
 import adminRouter from './routes/admin.routes.js';
 import leaveRoute from './routes/leave.routes.js';
+import salaryRoutes from './routes/salary.routes.js';
 
 const app = express();
 
@@ -22,6 +23,7 @@ app.use('/api/auth', authRouter);
 app.use('/api/employees', employeeRoute);
 app.use('/api/admin',adminRouter);
 app.use('/api/leaves',leaveRoute);
+app.use("/api/employees", salaryRoutes);
 // http://localhost:3000/api/auth
 // http://localhost:3000/api/departments
 // http://localhost:3000/api/employees

@@ -306,6 +306,36 @@ export const exportEmployees = async (req, res) => {
   }
 };
 
+// PUT /employees/:id/salary
+export const updateEmployeeSalary = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { basic } = req.body;
+
+    if (!basic) {
+      return res.status(400).json({ success: false, message: "Basic salary is required" });
+    }
+
+    const salary = await Salary.findOneAndUpdate(
+      { user: id },
+      { basic },
+      { new: true, upsert: true }
+    );
+
+    const employee = await User.findById(id).lean();
+
+    return res.status(200).json({
+      success: true,
+      message: "Salary updated successfully",
+      employee: { ...employee, salary },
+    });
+  } catch (error) {
+    console.error("Error updating salary:", error);
+    res.status(500).json({ success: false, message: "Internal server error while updating salary" });
+  }
+};
+
+
 
 
   export { createEmployee, getAllEmployees, deleteEmployee, monthlyPay };

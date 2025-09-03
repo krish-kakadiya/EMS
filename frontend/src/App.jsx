@@ -11,6 +11,7 @@ import { Routes, Route, Navigate } from "react-router-dom";
 import { useSelector } from "react-redux";
 import { Toaster } from "react-hot-toast";
 import EmployeeProfile from "./pages/employee/EmployeeProfile";
+import SalaryManagement from "./pages/SalaryManagement";
 
 function App() {
   const { user } = useSelector((state) => state.auth);
@@ -55,6 +56,17 @@ function App() {
             <ProtectedRoute adminOnly={true}>
               <Layout activePage="employees">
                 <AddNewUserPage />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/salary"
+          element={
+            <ProtectedRoute adminOnly={true}>
+              <Layout activePage="salary">
+                <SalaryManagement />
               </Layout>
             </ProtectedRoute>
           }

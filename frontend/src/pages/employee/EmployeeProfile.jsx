@@ -34,6 +34,11 @@ const EmployeeProfile = () => {
       setProfileImg(URL.createObjectURL(e.target.files[0]));
     }
   };
+  useEffect(() => {
+    if (!user?.salary) {
+      dispatch(getCurrentUser()); // fetch updated user including salary
+    }
+  }, [user, dispatch]);
 
   // ✅ load user & leaves
   useEffect(() => {
@@ -58,6 +63,21 @@ const EmployeeProfile = () => {
       dispatch(getMyLeaves());
       setLeaveForm({ type: "", reason: "", fromDate: "", toDate: "" });
     });
+  };
+
+  const calculateSalary = (basicSalary) => {
+    const allowances = basicSalary * 0.47;
+    const deductions = 0;
+    const grossSalary = basicSalary + allowances;
+    const netSalary = grossSalary - deductions;
+
+    return {
+      allowances: Math.round(allowances),
+      deductions: Math.round(deductions),
+      grossSalary: Math.round(grossSalary),
+      netSalary: Math.round(netSalary),
+      basicSalary
+    };
   };
 
   // ✅ show success/error
@@ -141,7 +161,19 @@ const EmployeeProfile = () => {
             <label>SALARY:</label>
             <input
               type="text"
-              value={user?.salary?.basic ? `₹${user.salary.basic}` : ""}
+              value={user?.salary?.basic ? `${calculateSalary(user.salary.basic).basicSalary}` : ""}
+              disabled
+            />
+            <label>ALLOWANCE:</label>
+            <input
+              type="text"
+              value={user?.salary?.basic ? `${calculateSalary(user.salary.basic).allowances}` : ""}
+              disabled
+            />
+            <label>NET SALARY:</label>
+            <input
+              type="text"
+              value={user?.salary?.basic ? `${calculateSalary(user.salary.basic).netSalary}` : ""}
               disabled
             />
           </div>

@@ -155,5 +155,41 @@ const employeeSlice = createSlice({
   },
 });
 
+// Update employee salary
+export const updateEmployeeSalary = createAsyncThunk(
+  "employees/updateSalary",
+  async ({ id, newBasic }) => {
+    const res = await api.put(`/employees/${id}/salary`, { basic: newBasic });
+    return res.data;
+  }
+);
+
+extraReducers: (builder) => {
+  builder
+    // Update employee salary
+    .addCase(updateEmployeeSalary.fulfilled, (state, action) => {
+      state.success = action.payload.message;
+      state.error = null;
+
+      // ✅ instantly update state so UI refreshes
+      state.employees = state.employees.map((emp) =>
+        emp._id === action.payload.employee._id
+          ? { ...emp, ...action.payload.employee }
+          : emp
+      );
+    })
+    .addCase(updateEmployeeSalary.rejected, (state, action) => {
+      state.error = action.payload?.message || "Failed to update salary";
+      state.success = null;
+    });
+};
+
+
+
+
+
+
+
+
 export const { clearMessages } = employeeSlice.actions;
 export default employeeSlice.reducer;
