@@ -3,6 +3,8 @@ import { Search, Download, FileText } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable"; // ✅ must import like this
+import ExcelJS from "exceljs";
+import { saveAs } from "file-saver";
 import logo from "../assets/logo.png"; // ✅ Appifly logo
 import background from "../assets/bg.png"; // ✅ background image
 
@@ -116,6 +118,65 @@ const SalaryTable = () => {
     }
   };
 
+
+  const handleExportReport = async () => {
+    if (!employees || employees.length === 0) return;
+
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet("Salary Report");
+
+    // ✅ Define columns
+    worksheet.columns = [
+      { header: "Employee Name", key: "name", width: 25 },
+      { header: "Employee ID", key: "employeeId", width: 15 },
+      { header: "Department", key: "department", width: 20 },
+      { header: "Basic Salary", key: "basicSalary", width: 15 },
+      { header: "Allowances", key: "allowances", width: 15 },
+      { header: "Deductions", key: "deductions", width: 15 },
+      { header: "Gross Salary", key: "grossSalary", width: 15 },
+      { header: "Net Salary", key: "netSalary", width: 15 },
+    ];
+
+    // ✅ Add rows dynamically
+    employees.forEach((emp) => {
+      const salary = calculateSalary(emp.salary?.basic || 0);
+
+      worksheet.addRow({
+        name: emp.name,
+        employeeId: emp.employeeId,
+        department: emp.department,
+        basicSalary: emp.salary?.basic || 0,
+        allowances: salary.allowances,
+        deductions: salary.deductions,
+        grossSalary: salary.grossSalary,
+        netSalary: salary.netSalary,
+      });
+    });
+
+    // ✅ Style the header row
+    worksheet.getRow(1).eachCell((cell) => {
+      cell.font = { bold: true, color: { argb: "FFFFFFFF" } };
+      cell.fill = {
+        type: "pattern",
+        pattern: "solid",
+        fgColor: { argb: "FF2980B9" }, // Blue header
+      };
+      cell.alignment = { vertical: "middle", horizontal: "center" };
+      cell.border = {
+        top: { style: "thin" },
+        left: { style: "thin" },
+        bottom: { style: "thin" },
+        right: { style: "thin" },
+      };
+    });
+
+    // ✅ Generate Excel buffer
+    const buffer = await workbook.xlsx.writeBuffer();
+
+    // ✅ Trigger download
+    saveAs(new Blob([buffer]), "Salary_Report.xlsx");
+  };
+
   // ✅ Download Salary Slip (with working images)
   const handleDownloadSlip = async (employee) => {
   try {
@@ -164,13 +225,15 @@ const SalaryTable = () => {
   } catch (err) {
     console.error("PDF generation failed:", err);
   }
+
+
 };
 
 
   return (
     <div className="salary-container">
       <div className="salary-header">
-        <h2>SALARY MANAGEMENT</h2>
+        <h1>Salary Management</h1>
         <p>Manage employee salary details and calculations</p>
       </div>
 
@@ -206,7 +269,7 @@ const SalaryTable = () => {
 
         <button
           className="export-btn"
-          onClick={() => dispatch(exportEmployees())}
+          onClick={handleExportReport}
         >
           <Download size={16} />
           Export Report

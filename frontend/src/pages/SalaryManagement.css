@@ -1,7 +1,7 @@
 /* Salary Management Styles */
 .salary-container {
   padding: 24px;
-  background: #f9fafb;
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); 
   min-height: 100vh;
 }
 
@@ -9,11 +9,14 @@
   margin-bottom: 24px;
 }
 
-.salary-header h2 {
-  font-size: 30px;
+.salary-header h1 {
+  font-size: 36px;
   font-weight: 700;
   color: #5d7ce4;
   margin-bottom: 8px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
 
 .salary-header p {
@@ -77,22 +80,26 @@
 }
 
 .export-btn {
-  padding: 8px 16px;
-  background: #10b981;
-  color: white;
+
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: #fff !important;
+  box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4);
+  padding: 10px 18px;
+  border-radius: 40px;
+  font-weight: 600;
   border: none;
-  border-radius: 6px;
-  cursor: pointer;
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 14px;
-  font-weight: 500;
+  gap: 6px;
+  cursor: pointer;
+  
 }
 
 .export-btn:hover {
-  background: #059669;
+  background: #1d4ed8;
+  transition: all 0.2s ease;
 }
+
 
 /* Table */
 .table-container {
@@ -108,8 +115,8 @@ table {
 }
 
 thead {
-  background: #5d7ce4;
-  color: white;
+  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+  color: #4a5568;
 }
 
 th {
@@ -145,7 +152,7 @@ td {
 .avatar {
   width: 40px;
   height: 40px;
-  background: #5d7ce4;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -266,7 +273,7 @@ td {
 
 .update-btn {
   padding: 6px 12px;
-  background: #3b82f6;
+  background: linear-gradient(135deg, #22c55e, #16a34a) !important;
   color: white;
   border: none;
   border-radius: 6px;
@@ -337,47 +344,7 @@ td {
   background: #059669;
 }
 
-.edit-btn {
-  margin-left: 8px;
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  color: #555;
-  transition: color 0.2s ease-in-out;
-}
 
-.edit-btn:hover {
-  color: #007bff;
-}
-
-/* ✅ Notification Popup */
-.notification {
-  position: fixed;
-  top: 20px;
-  right: 20px;
-  padding: 12px 20px;
-  border-radius: 6px;
-  font-size: 14px;
-  font-weight: 500;
-  color: white;
-  z-index: 1000;
-  animation: fadeInOut 3s ease-in-out;
-}
-
-.notification.success {
-  background: #10b981;
-}
-
-.notification.error {
-  background: #ef4444;
-}
-
-@keyframes fadeInOut {
-  0% { opacity: 0; transform: translateY(-10px); }
-  10% { opacity: 1; transform: translateY(0); }
-  90% { opacity: 1; }
-  100% { opacity: 0; transform: translateY(-10px); }
-}
 
 /* Salary Slip Button */
 .action-buttons {
@@ -387,7 +354,7 @@ td {
 
 .slip-btn {
   padding: 6px 12px;
-  background: #f59e0b;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6) !important;
   color: white;
   border: none;
   border-radius: 6px;
@@ -396,10 +363,6 @@ td {
   align-items: center;
   gap: 6px;
   font-size: 13px;
-}
-
-.slip-btn:hover {
-  background: #d97706;
 }
 
 /* Salary Slip Modal */

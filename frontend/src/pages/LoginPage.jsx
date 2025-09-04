@@ -35,14 +35,14 @@ const LoginPage = () => {
   return (
     <div className="login-container">
       <div className="login-box">
-        <h2 className="login-title">LOGIN</h2>
+        <h2 className="login-title">Welcome Back</h2>
 
         <form onSubmit={handleLogin}>
           <div className="input-group">
             <FaEnvelope className="input-icon" />
             <input
               type="email"
-              placeholder="EMAIL"
+              placeholder="Enter your email address"
               id="email"
               name="email"
               className="input-field"
@@ -56,7 +56,7 @@ const LoginPage = () => {
             <FaLock className="input-icon" />
             <input
               type={showPassword ? "text" : "password"}
-              placeholder="PASSWORD"
+              placeholder="Enter your password"
               className="input-field"
               id="password"
               name="password"
@@ -65,16 +65,21 @@ const LoginPage = () => {
               required
             />
             <span className="eye-icon" onClick={togglePassword}>
-              {showPassword ? <FaEye /> : <FaEyeSlash />}
+              {showPassword ? <FaEyeSlash /> : <FaEye />}
             </span>
           </div>
 
-          <div className="forgot-password">FORGOT PASSWORD</div>
+          <div className="forgot-password">Forgot Password?</div>
 
-          <button type="submit" className="login-btn" disabled={loading}>
-            {loading ? "Logging in..." : "LOGIN"}
+          <button 
+            type="submit" 
+            className={`login-btn ${loading ? 'loading' : ''}`} 
+            disabled={loading}
+          >
+            {loading ? "" : "Log In"}
           </button>
         </form>
+
       </div>
     </div>
   );

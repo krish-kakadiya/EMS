@@ -282,21 +282,25 @@
   background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
 }
 
+/* ✅ FIXED TABLE HEADINGS - Better alignment and sizing */
 .employee-table th {
-  padding: 20px 24px;
+  padding: 18px 20px;
   text-align: left;
   font-weight: 600;
   color: #4a5568;
-  font-size: 13px;
+  font-size: 11px; /* Smaller heading size */
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.8px;
   border-bottom: 2px solid #e2e8f0;
+  vertical-align: middle; /* ✅ Perfect vertical alignment */
+  line-height: 1.2; /* ✅ Better line spacing */
 }
 
+/* ✅ FIXED TABLE CELLS - Better alignment */
 .employee-table td {
-  padding: 20px 24px;
+  padding: 18px 20px;
   border-bottom: 1px solid #f7fafc;
-  vertical-align: middle;
+  vertical-align: middle; /* ✅ Perfect vertical alignment */
 }
 
 .employee-row {
@@ -318,10 +322,12 @@
   font-size: 12px;
 }
 
+/* ✅ FIXED EMPLOYEE NAME - Reduced font size */
 .employee-name {
-  font-weight: 600;
+  font-weight: 500;
   color: #2d3748;
-  font-size: 15px;
+  font-size: 15px; /* ✅ Reduced from 14px to 13px */
+  line-height: 1.3; /* ✅ Better line height */
 }
 
 .department-badge {
@@ -347,6 +353,7 @@
   color: white;
   font-size: 16px;
   margin: 0 auto;
+  margin-left: 10px;
 }
 
 /* ---------- DELETE BUTTON ---------- */
@@ -483,6 +490,11 @@
     height: 32px;
     font-size: 14px;
   }
+
+  /* ✅ Responsive name sizing */
+  .employee-name {
+    font-size: 12px;
+  }
 }
 
 /* Body adjustments for fixed navbar */
@@ -591,7 +603,6 @@ html {
   color: #fff !important;
   box-shadow: 0 4px 15px rgba(34, 197, 94, 0.4);
 }
-
 
 /* Shining effect overlay */
 .btn::before {

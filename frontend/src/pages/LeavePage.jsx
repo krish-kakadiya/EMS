@@ -244,7 +244,7 @@ const LeavePage = () => {
         {/* Header */}
         <div className="leave-header">
           <h1 className="leave-title">Leave Management System</h1>
-          <p className="leave-subtitle">Manage employee leave requests efficiently</p>
+          
         </div>
 
         {/* Status Messages */}
