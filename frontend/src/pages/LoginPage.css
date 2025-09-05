@@ -8,7 +8,7 @@
 
 body {
   font-family: 'Inter', 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
-  overflow: hidden;
+  
 }
 
 .login-container {
@@ -259,14 +259,7 @@ body {
   100% { transform: rotate(360deg); }
 }
 
-/* Company branding area (optional) */
-.login-footer {
-  margin-top: 32px;
-  padding-top: 24px;
-  border-top: 1px solid #e2e8f0;
-  color: #718096;
-  font-size: 13px;
-}
+
 
 /* Responsive Design */
 @media (max-width: 768px) {
