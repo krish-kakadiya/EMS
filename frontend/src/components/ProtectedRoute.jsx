@@ -3,7 +3,7 @@ import { Navigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { getCurrentUser } from "../redux/slices/authSlice";
 
-const ProtectedRoute = ({ children, adminOnly = false }) => {
+const ProtectedRoute = ({ children, adminOnly = false, hrOnly = false }) => {
   const dispatch = useDispatch();
   const { user, loading } = useSelector((state) => state.auth);
 
@@ -16,6 +16,11 @@ const ProtectedRoute = ({ children, adminOnly = false }) => {
   if (loading) return <div>Loading...</div>;
 
   if (!user) return <Navigate to="/login" replace />;
+
+  if (!hrOnly && user.role == "hr") {
+    // Redirect non-admins to EmployeeProfile
+    return <Navigate to="/section-component" replace />;
+  }
 
   if (adminOnly && user.role !== "admin") {
     // Redirect non-admins to EmployeeProfile

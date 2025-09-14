@@ -1,10 +1,8 @@
 import LoginPage from "./pages/LoginPage";
 import DashboardPage from "./pages/DashboardPage";
-import EmployeePage from "./pages/EmployeePage";
+import EmployeePage from "./pages/EmployeeData";
 import AddNewUserPage from "./pages/AddNewUserPage";
 import LeavePage from "./pages/LeavePage";
-
-
 import Layout from "./components/Layout";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { Routes, Route, Navigate } from "react-router-dom";
@@ -12,6 +10,8 @@ import { useSelector } from "react-redux";
 import { Toaster } from "react-hot-toast";
 import EmployeeProfile from "./pages/employee/EmployeeProfile";
 import SalaryManagement from "./pages/SalaryManagement";
+import SectionComponent from "./components/project-manager/SectionComponent.jsx";
+
 
 function App() {
   const { user } = useSelector((state) => state.auth);
@@ -85,6 +85,25 @@ function App() {
         />
 
         {/* Employee Profile Page */}
+        <Route
+          path="/profile"
+          element={
+            <ProtectedRoute>
+              <EmployeeProfile />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* hr Dashboard */}
+        <Route
+          path="/section-component"
+          element={
+            <ProtectedRoute hrOnly={true}>
+              <SectionComponent />
+            </ProtectedRoute>
+          }
+        />
+
         <Route
           path="/profile"
           element={

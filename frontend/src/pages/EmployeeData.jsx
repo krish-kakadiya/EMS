@@ -9,7 +9,7 @@ import {
   clearMessages,
 } from "../redux/slices/employeeSlice";
 
-import "./EmployeePage.css";
+import "./EmployeeData.css";
 
 const EmployeePage = () => {
   const [selectedFilter, setSelectedFilter] = useState("ALL");
