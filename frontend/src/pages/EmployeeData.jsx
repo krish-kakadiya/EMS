@@ -195,8 +195,8 @@ const EmployeePage = () => {
       </div>
 
       {/* ---------- Employee Table ---------- */}
-      <div className="employee-table-container">
-        <table className="employee-table">
+      <div className="employee-header-table-container">
+        <table className="employee-header-table">
           <thead>
             <tr>
               <th>Employee ID</th>
@@ -223,7 +223,7 @@ const EmployeePage = () => {
                   </div>
                 </td>
                 <td>
-                  <span className="employee-name">{employee.name}</span>
+                  <span className="employee-fullname">{employee.name}</span>
                 </td>
                 <td>
                   <span className="department-badge">

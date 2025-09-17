@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from "react";
-import "./EmployeeProfile.css";
 import Navbar from "../../components/Navbar";
 import { useSelector, useDispatch } from "react-redux";
 import { FaEye, FaEyeSlash, FaUser, FaCamera, FaCalendarAlt, FaEdit } from "react-icons/fa";
@@ -9,6 +8,8 @@ import {
   clearMessages,
 } from "../../redux/slices/leaveSlice";
 import { getCurrentUser } from "../../redux/slices/authSlice";
+import "./EmployeeProfile.css";
+
 
 const EmployeeProfile = () => {
   const [profileImg, setProfileImg] = useState(null);
@@ -115,7 +116,7 @@ const EmployeeProfile = () => {
         </div>
 
         <div className="profile-info">
-          <h1 className="employee-name">{user?.name || "Employee Name"}</h1>
+          <h1 className="employees-name">{user?.name || "Employee Name"}</h1>
           <p className="employee-details">
             <span className="role">{user?.role || "Employee"}</span> • 
             <span className="department">{user?.department || "Department"}</span>

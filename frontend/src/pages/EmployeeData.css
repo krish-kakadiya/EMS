@@ -257,14 +257,14 @@
   margin-bottom: 8px;
 }
 
-.stat-label {
+.stat-card .stat-label {
   font-size: 14px;
-  color: #718096;
+  color: #5a6575;
   font-weight: 500;
 }
 
 /* ---------- TABLE ---------- */
-.employee-table-container {
+.employee-header-table-container {
   background: white;
   border-radius: 16px;
   overflow: hidden;
@@ -272,18 +272,18 @@
   border: 1px solid #f7fafc;
 }
 
-.employee-table {
+.employee-header-table {
   width: 100%;
   border-collapse: collapse;
   font-size: 14px;
 }
 
-.employee-table thead {
+.employee-header-table thead {
   background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
 }
 
 /* ✅ FIXED TABLE HEADINGS - Better alignment and sizing */
-.employee-table th {
+.employee-header-table thead th {
   padding: 18px 20px;
   text-align: left;
   font-weight: 600;
@@ -297,7 +297,7 @@
 }
 
 /* ✅ FIXED TABLE CELLS - Better alignment */
-.employee-table td {
+.employee-header-table td {
   padding: 18px 20px;
   border-bottom: 1px solid #f7fafc;
   vertical-align: middle; /* ✅ Perfect vertical alignment */
@@ -323,7 +323,7 @@
 }
 
 /* ✅ FIXED EMPLOYEE NAME - Reduced font size */
-.employee-name {
+.employee-fullname {
   font-weight: 500;
   color: #2d3748;
   font-size: 15px; /* ✅ Reduced from 14px to 13px */
@@ -457,12 +457,12 @@
     overflow-x: auto;
   }
 
-  .employee-table {
+  .employee-header-table {
     min-width: 600px;
   }
 
-  .employee-table th,
-  .employee-table td {
+  .employee-header-table th,
+  .employee-header-table td {
     padding: 12px 16px;
   }
 }
@@ -480,8 +480,8 @@
     font-size: 2rem;
   }
 
-  .employee-table th,
-  .employee-table td {
+  .employee-header-table th,
+  .employee-header-table td {
     padding: 8px 12px;
   }
 
