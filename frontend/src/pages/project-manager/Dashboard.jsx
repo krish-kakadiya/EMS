@@ -60,20 +60,82 @@ const Dashboard = () => {
   ]);
 
   const [employees] = useState([
-    { id: 'EMP001', name: 'John Doe', department: 'Frontend Development' },
-    { id: 'EMP002', name: 'Jane Smith', department: 'UI/UX Design' },
-    { id: 'EMP003', name: 'Mike Johnson', department: 'Backend Development' },
-    { id: 'EMP004', name: 'Sarah Wilson', department: 'Full Stack Development' },
-    { id: 'EMP005', name: 'David Brown', department: 'DevOps' },
-    { id: 'EMP006', name: 'Emma Davis', department: 'QA Testing' },
-    { id: 'EMP007', name: 'Alex Thompson', department: 'Project Management' },
-    { id: 'EMP008', name: 'Lisa Garcia', department: 'Data Analysis' },
-    { id: 'EMP009', name: 'Chris Lee', department: 'System Admin' }
+    { 
+      id: 'EMP001', 
+      name: 'John Doe', 
+      department: 'Frontend Development',
+      photo: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face',
+      email: 'john.doe@company.com',
+      role: 'Senior Developer'
+    },
+    { 
+      id: 'EMP002', 
+      name: 'Jane Smith', 
+      department: 'UI/UX Design',
+      photo: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&h=150&fit=crop&crop=face',
+      email: 'jane.smith@company.com',
+      role: 'Lead Designer'
+    },
+    { 
+      id: 'EMP003', 
+      name: 'Mike Johnson', 
+      department: 'Backend Development',
+      photo: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&h=150&fit=crop&crop=face',
+      email: 'mike.johnson@company.com',
+      role: 'Backend Developer'
+    },
+    { 
+      id: 'EMP004', 
+      name: 'Sarah Wilson', 
+      department: 'Full Stack Development',
+      photo: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=150&h=150&fit=crop&crop=face',
+      email: 'sarah.wilson@company.com',
+      role: 'Full Stack Developer'
+    },
+    { 
+      id: 'EMP005', 
+      name: 'David Brown', 
+      department: 'DevOps',
+      photo: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face',
+      email: 'david.brown@company.com',
+      role: 'DevOps Engineer'
+    },
+    { 
+      id: 'EMP006', 
+      name: 'Emma Davis', 
+      department: 'QA Testing',
+      photo: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&h=150&fit=crop&crop=face',
+      email: 'emma.davis@company.com',
+      role: 'QA Engineer'
+    },
+    { 
+      id: 'EMP007', 
+      name: 'Alex Thompson', 
+      department: 'Project Management',
+      photo: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=150&h=150&fit=crop&crop=face',
+      email: 'alex.thompson@company.com',
+      role: 'Project Manager'
+    },
+    { 
+      id: 'EMP008', 
+      name: 'Lisa Garcia', 
+      department: 'Data Analysis',
+      photo: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150&h=150&fit=crop&crop=face',
+      email: 'lisa.garcia@company.com',
+      role: 'Data Analyst'
+    },
+    { 
+      id: 'EMP009', 
+      name: 'Chris Lee', 
+      department: 'System Admin',
+      photo: 'https://images.unsplash.com/photo-1519345182560-3f2917c472ef?w=150&h=150&fit=crop&crop=face',
+      email: 'chris.lee@company.com',
+      role: 'System Administrator'
+    }
   ]);
 
   const [showAddProject, setShowAddProject] = useState(false);
   const [showTeamView, setShowTeamView] = useState(false);
-  const [showAnalytics, setShowAnalytics] = useState(false);
   const [selectedProject, setSelectedProject] = useState(null);
   const [selectedEmployees, setSelectedEmployees] = useState([]);
   const [activeFilter, setActiveFilter] = useState('All');
@@ -199,84 +261,73 @@ const Dashboard = () => {
     setShowTeamView(true);
   };
 
-  const handleAnalytics = (project) => {
-    setSelectedProject(project);
-    setShowAnalytics(true);
-  };
-
-  const getAnalyticsData = () => {
-    if (!selectedProject) return [];
-    
-    return selectedProject.teamMembers.map(empId => {
-      const employee = getEmployeeById(empId);
-      const tasksAssigned = Math.floor(Math.random() * 5) + 1;
-      const tasksCompleted = Math.floor(Math.random() * tasksAssigned);
-      const hoursWorked = Math.floor(Math.random() * 40) + 10;
-      
-      return {
-        employee,
-        tasksAssigned,
-        tasksCompleted,
-        hoursWorked,
-        efficiency: Math.round((tasksCompleted / tasksAssigned) * 100)
-      };
-    });
-  };
-
   const stats = getProjectStats();
 
   return (
     <div className="dashboard">
       <div className="dashboard-header">
         <div className="header-content">
-          <h2>Project Dashboard</h2>
+          <h2 className="header-title">Project Dashboard</h2>
           <p className="header-subtitle">Manage and track your projects efficiently</p>
         </div>
         <button 
           className="add-project-btn"
           onClick={() => setShowAddProject(true)}
         >
-          Add New Project
+          <span className="btn-text">Add New Project</span>
+          <div className="btn-shine"></div>
         </button>
       </div>
 
       <div className="stats-container">
         <div className="stat-card">
-          <div className="stat-icon">📋</div>
-          <div className="stat-content">
-            <h3>{stats.pending}</h3>
-            <p>Pending Projects</p>
+          <div className="stat-icon pending">
+            <span>📋</span>
           </div>
+          <div className="stat-content">
+            <h3 className="stat-number">{stats.pending}</h3>
+            <p className="stat-label">Pending Projects</p>
+          </div>
+          <div className="stat-decoration"></div>
         </div>
         
         <div className="stat-card">
-          <div className="stat-icon">⚡</div>
-          <div className="stat-content">
-            <h3>{stats.working}</h3>
-            <p>Active Projects</p>
+          <div className="stat-icon progress">
+            <span>⚡</span>
           </div>
+          <div className="stat-content">
+            <h3 className="stat-number">{stats.working}</h3>
+            <p className="stat-label">Active Projects</p>
+          </div>
+          <div className="stat-decoration"></div>
         </div>
         
         <div className="stat-card">
-          <div className="stat-icon">✓</div>
-          <div className="stat-content">
-            <h3>{stats.completed}</h3>
-            <p>Completed Projects</p>
+          <div className="stat-icon completed">
+            <span>✓</span>
           </div>
+          <div className="stat-content">
+            <h3 className="stat-number">{stats.completed}</h3>
+            <p className="stat-label">Completed Projects</p>
+          </div>
+          <div className="stat-decoration"></div>
         </div>
         
         <div className="stat-card">
-          <div className="stat-icon">📊</div>
-          <div className="stat-content">
-            <h3>{stats.total}</h3>
-            <p>Total Projects</p>
+          <div className="stat-icon total">
+            <span>📊</span>
           </div>
+          <div className="stat-content">
+            <h3 className="stat-number">{stats.total}</h3>
+            <p className="stat-label">Total Projects</p>
+          </div>
+          <div className="stat-decoration"></div>
         </div>
       </div>
 
       <div className="projects-container">
         <div className="projects-header">
-          <h3>All Projects ({getFilteredProjects().length})</h3>
+          <h3 className="projects-title">All Projects ({getFilteredProjects().length})</h3>
           <div className="filter-tabs">
             {['All', 'Active', 'Pending', 'Completed'].map(filter => (
               <button 
@@ -368,13 +419,8 @@ const Dashboard = () => {
                   className="action-btn secondary"
                   onClick={() => handleTeamView(project)}
                 >
+                  <span>👥</span>
                   Team
-                </button>
-                <button 
-                  className="action-btn secondary"
-                  onClick={() => handleAnalytics(project)}
-                >
-                  Analytics
                 </button>
                 <a 
                   href={project.githubLink} 
@@ -382,6 +428,7 @@ const Dashboard = () => {
                   rel="noopener noreferrer"
                   className="action-btn primary"
                 >
+                  <span>🔗</span>
                   Repository
                 </a>
               </div>
@@ -531,18 +578,23 @@ const Dashboard = () => {
                   {employees.map((employee) => (
                     <div 
                       key={employee.id} 
-                      className={`employee-card-horizontal ${selectedEmployees.includes(employee.id) ? 'selected' : ''}`}
+                      className={`employee-card ${selectedEmployees.includes(employee.id) ? 'selected' : ''}`}
                       onClick={() => handleEmployeeSelection(employee.id)}
                     >
-                      <div className="employee-avatar-small">
+                      <div className="employee-avatar">
                         <img src={employee.photo} alt={employee.name} />
+                        <div className="avatar-status"></div>
                       </div>
                       <div className="employee-info">
-                        <h5>{employee.name}</h5>
+                        <h5 className="employee-name">{employee.name}</h5>
+                        <span className="employee-role">{employee.role}</span>
                         <span className="employee-department">{employee.department}</span>
+                        <span className="employee-email">{employee.email}</span>
                       </div>
                       {selectedEmployees.includes(employee.id) && (
-                        <div className="selection-check">✓</div>
+                        <div className="selection-check">
+                          <span>✓</span>
+                        </div>
                       )}
                     </div>
                   ))}
@@ -588,9 +640,14 @@ const Dashboard = () => {
                 const employee = getEmployeeById(empId);
                 return employee ? (
                   <div key={empId} className="team-member-card">
+                    <div className="team-member-avatar">
+                      <img src={employee.photo} alt={employee.name} />
+                    </div>
                     <div className="member-info">
                       <h4>{employee.name}</h4>
-                      <p>{employee.department}</p>
+                      <p className="member-role">{employee.role}</p>
+                      <p className="member-department">{employee.department}</p>
+                      <p className="member-email">{employee.email}</p>
                     </div>
                     <div className="member-stats">
                       <span>Active Tasks: {Math.floor(Math.random() * 3) + 1}</span>
@@ -598,60 +655,6 @@ const Dashboard = () => {
                   </div>
                 ) : null;
               })}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {showAnalytics && selectedProject && (
-        <div className="modal-overlay">
-          <div className="modal large">
-            <div className="modal-header">
-              <h3>Analytics - {selectedProject.name}</h3>
-              <button 
-                className="close-btn"
-                onClick={() => setShowAnalytics(false)}
-              >
-                ×
-              </button>
-            </div>
-            
-            <div className="analytics-container">
-              <h4>Employee Contribution</h4>
-              <div className="analytics-grid">
-                {getAnalyticsData().map((data, index) => (
-                  <div key={index} className="analytics-card">
-                    <div className="employee-header">
-                      <h5>{data.employee.name}</h5>
-                      <span className="department">{data.employee.department}</span>
-                    </div>
-                    <div className="contribution-stats">
-                      <div className="stat">
-                        <span className="stat-label">Tasks Assigned</span>
-                        <span className="stat-value">{data.tasksAssigned}</span>
-                      </div>
-                      <div className="stat">
-                        <span className="stat-label">Tasks Completed</span>
-                        <span className="stat-value">{data.tasksCompleted}</span>
-                      </div>
-                      <div className="stat">
-                        <span className="stat-label">Hours Worked</span>
-                        <span className="stat-value">{data.hoursWorked}h</span>
-                      </div>
-                      <div className="stat">
-                        <span className="stat-label">Efficiency</span>
-                        <span className="stat-value">{data.efficiency}%</span>
-                      </div>
-                    </div>
-                    <div className="efficiency-bar">
-                      <div 
-                        className="efficiency-fill" 
-                        style={{ width: `${data.efficiency}%` }}
-                      ></div>
-                    </div>
-                  </div>
-                ))}
-              </div>
             </div>
           </div>
         </div>
