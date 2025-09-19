@@ -1,4 +1,17 @@
 /* AddNewUserPage.css */
+
+/* Global reset for form elements to remove browser defaults */
+* {
+  outline: none !important;
+}
+
+select, input, textarea {
+  outline: none !important;
+  -webkit-appearance: none !important;
+  -moz-appearance: none !important;
+  appearance: none !important;
+}
+
 .add-new-user-page {
   background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
   min-height: 100vh;
@@ -76,10 +89,6 @@
 }
 
 .form-icon {
-  width: 60px;
-  height: 60px;
-  background: rgba(255, 255, 255, 0.2);
-  border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -190,16 +199,26 @@
 /* Select Dropdown Styling */
 select.form-input {
   cursor: pointer;
-  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%23a0aec0' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m6 8 4 4 4-4'/%3e%3c/svg%3e");
-  background-position: right 16px center;
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%23a0aec0' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e");
+  background-position: right 12px center;
   background-repeat: no-repeat;
-  background-size: 16px;
-  padding-right: 48px;
+  background-size: 12px;
+  padding-right: 36px;
   appearance: none;
+  outline: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background-color: white;
 }
 
 select.form-input:focus {
-  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%23667eea' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m6 8 4 4 4-4'/%3e%3c/svg%3e");
+  border-color: #e2e8f0;
+  background-color: white;
+  box-shadow: none;
+  transform: none;
+  cursor: pointer;
 }
 
 /* Input with Prefix */
@@ -375,8 +394,30 @@ select.form-input:focus {
   }
 }
 
-/* Focus styles for keyboard navigation */
+/* Remove all focus outlines and browser default styles */
+.form-input,
+select.form-input,
+.form-input:focus,
+select.form-input:focus,
 .form-input:focus-visible,
+select.form-input:focus-visible,
+select:focus,
+select:active,
+select:hover {
+  outline: none !important;
+  box-shadow: none !important;
+  border: 2px solid #e2e8f0 !important;
+}
+
+/* Specific focus state for select */
+select.form-input:focus {
+  border-color: #667eea !important;
+  background: white !important;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1) !important;
+  transform: translateY(-1px) !important;
+}
+
+/* Focus styles for keyboard navigation */
 .submit-btn:focus-visible,
 .cancel-btn:focus-visible,
 .back-btn:focus-visible {
