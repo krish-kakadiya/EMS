@@ -14,7 +14,7 @@ const createSuperAdmin = async (req, res) => {
     }
 
     // 2. Check if a super admin already exists
-    const existingAdmin = await User.findOne({ role: "admin" });
+    const existingAdmin = await User.findOne({ role: "hr" });
     if (existingAdmin) {
       return res.status(400).json({
         success: false,
@@ -23,16 +23,16 @@ const createSuperAdmin = async (req, res) => {
     }
 
     // 3. Generate admin employeeId
-    let counter = await Counter.findOne({ role: "admin" });
+    let counter = await Counter.findOne({ role: "hr" });
     if (!counter) {
-      counter = await Counter.create({ role: "admin", count: 1 });
+      counter = await Counter.create({ role: "hr", count: 1 });
     } else {
       counter.count += 1;
       await counter.save();
     }
 
     const formattedCount = String(counter.count).padStart(3, "0");
-    const employeeId = `ADM${formattedCount}`;
+    const employeeId = `HR${formattedCount}`;
 
     // 4. Create the super admin
     const superAdmin = await User.create({
@@ -40,7 +40,7 @@ const createSuperAdmin = async (req, res) => {
       email,
       password, // will be hashed by userSchema.pre("save")
       department,
-      role: "admin",
+      role: "hr",
       employeeId,
     });
 

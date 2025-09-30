@@ -29,10 +29,10 @@ const protectedRoutes = async (req, res, next) => {
 const adminRoutes = (req, res, next) => {
   const user = req.user;
 
-  if (!user || user.role !== "admin") {
+  if (!user || user.role !== "hr") {
     return res.status(403).json({
       success: false,
-      message: "Access denied, admin only",
+      message: "Access denied, HR only",
     });
   }
 

@@ -1,17 +1,21 @@
+import React from "react";
+import { Routes, Route, Navigate } from "react-router-dom";
+import { useSelector } from "react-redux";
+import { Toaster } from "react-hot-toast";
+
+// Pages
 import LoginPage from "./pages/LoginPage";
 import DashboardPage from "./pages/DashboardPage";
 import EmployeePage from "./pages/EmployeeData";
 import AddNewUserPage from "./pages/AddNewUserPage";
 import LeavePage from "./pages/LeavePage";
-import Layout from "./components/Layout";
-import ProtectedRoute from "./components/ProtectedRoute";
-import { Routes, Route, Navigate } from "react-router-dom";
-import { useSelector } from "react-redux";
-import { Toaster } from "react-hot-toast";
 import EmployeeProfile from "./pages/employee/EmployeeProfile";
 import SalaryManagement from "./pages/SalaryManagement";
 import SectionComponent from "./components/project-manager/SectionComponent.jsx";
 
+// Components
+import Layout from "./components/Layout";
+import ProtectedRoute from "./components/ProtectedRoute";
 
 function App() {
   const { user } = useSelector((state) => state.auth);
@@ -25,23 +29,27 @@ function App() {
           element={user ? <Navigate to="/" replace /> : <LoginPage />}
         />
 
-        {/* Admin Dashboard */}
+        {/* Dynamic Home Route */}
         <Route
           path="/"
           element={
-            <ProtectedRoute adminOnly={true}>
-              <Layout activePage="dashboard">
-                <DashboardPage />
-              </Layout>
+            <ProtectedRoute>
+              {user?.role === "hr" && (
+                <Layout activePage="dashboard">
+                  <DashboardPage />
+                </Layout>
+              )}
+              {user?.role === "pm" && <SectionComponent />}
+              {user?.role === "employee" && <EmployeeProfile />}
             </ProtectedRoute>
           }
         />
 
-        {/* Employees Page (Admin Only) */}
+        {/* HR-only Routes */}
         <Route
           path="/employees"
           element={
-            <ProtectedRoute adminOnly={true}>
+            <ProtectedRoute hrOnly={true}>
               <Layout activePage="employees">
                 <EmployeePage />
               </Layout>
@@ -49,11 +57,10 @@ function App() {
           }
         />
 
-        {/* Add New User Page (Admin Only) */}
         <Route
           path="/add-new-user"
           element={
-            <ProtectedRoute adminOnly={true}>
+            <ProtectedRoute hrOnly={true}>
               <Layout activePage="employees">
                 <AddNewUserPage />
               </Layout>
@@ -64,7 +71,7 @@ function App() {
         <Route
           path="/salary"
           element={
-            <ProtectedRoute adminOnly={true}>
+            <ProtectedRoute hrOnly={true}>
               <Layout activePage="salary">
                 <SalaryManagement />
               </Layout>
@@ -72,11 +79,10 @@ function App() {
           }
         />
 
-        {/* Leave Page (Admin Only) */}
         <Route
           path="/leave"
           element={
-            <ProtectedRoute adminOnly={true}>
+            <ProtectedRoute hrOnly={true}>
               <Layout activePage="leave">
                 <LeavePage />
               </Layout>
@@ -84,7 +90,7 @@ function App() {
           }
         />
 
-        {/* Employee Profile Page */}
+        {/* Employee Profile (All logged in users) */}
         <Route
           path="/profile"
           element={
@@ -94,24 +100,18 @@ function App() {
           }
         />
 
-        {/* hr Dashboard */}
+        {/* PM-only section */}
         <Route
           path="/section-component"
           element={
-            <ProtectedRoute hrOnly={true}>
+            <ProtectedRoute pmOnly={true}>
               <SectionComponent />
             </ProtectedRoute>
           }
         />
 
-        <Route
-          path="/profile"
-          element={
-            <ProtectedRoute>
-              <EmployeeProfile />
-            </ProtectedRoute>
-          }
-        />
+        {/* Fallback */}
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
 
       <Toaster position="top-center" toastOptions={{ duration: 3000 }} />
