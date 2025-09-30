@@ -200,6 +200,21 @@ const Dashboard = () => {
     setShowTeamView(true);
   };
 
+  const getActiveTaskCount = (employee, project) => {
+    if (!employee || !project) return 0;
+    const pid = project._id || project.id;
+    return tasks.filter(t => {
+      if (!t.project || t.status !== 'in-progress') return false;
+      const tp = t.project._id || t.project.id || t.project;
+      if (tp !== pid) return false;
+      // assignedTo may be array of user objects or ids
+      return (t.assignedTo || []).some(a => {
+        if (typeof a === 'string') return a === employee._id;
+        return (a._id === employee._id);
+      });
+    }).length;
+  };
+
   const openEditTeam = (project) => {
     setEditTeamProject(project);
     // Normalize existing teamMembers to employeeId list
@@ -643,7 +658,7 @@ const Dashboard = () => {
                       <p className="member-email">{employee.email}</p>
                     </div>
                     <div className="member-stats">
-                      <span>Active Tasks: 0</span>
+                      <span>Active Tasks: {getActiveTaskCount(employee, selectedProject)}</span>
                     </div>
                   </div>
                 );
