@@ -5,7 +5,8 @@ import {
   fetchProjects, 
   createProject as apiCreateProject, 
   fetchSimpleEmployees,
-  fetchTasks
+  fetchTasks,
+  updateProjectTeam
 } from '../../axios/projectTaskApi';
 
 const Dashboard = () => {
@@ -17,7 +18,10 @@ const Dashboard = () => {
 
   const [showAddProject, setShowAddProject] = useState(false);
   const [showTeamView, setShowTeamView] = useState(false);
+  const [showEditTeam, setShowEditTeam] = useState(false);
   const [selectedProject, setSelectedProject] = useState(null);
+  const [editTeamProject, setEditTeamProject] = useState(null);
+  const [editTeamSelected, setEditTeamSelected] = useState([]); // employeeIds
   const [selectedEmployees, setSelectedEmployees] = useState([]);
   const [activeFilter, setActiveFilter] = useState('All');
 
@@ -196,6 +200,50 @@ const Dashboard = () => {
     setShowTeamView(true);
   };
 
+  const openEditTeam = (project) => {
+    setEditTeamProject(project);
+    // Normalize existing teamMembers to employeeId list
+    const existing = (project.teamMembers || []).map(m => {
+      if (typeof m === 'string') {
+        const emp = employees.find(e => e._id === m || e.employeeId === m);
+        return emp?.employeeId || emp?._id || m;
+      }
+      return m.employeeId || m._id;
+    }).filter(Boolean);
+    setEditTeamSelected(existing);
+    setShowEditTeam(true);
+  };
+
+  const toggleEditTeamMember = (employeeId) => {
+    setEditTeamSelected(prev => prev.includes(employeeId)
+      ? prev.filter(id => id !== employeeId)
+      : [...prev, employeeId]);
+  };
+
+  const saveEditTeam = async () => {
+    if (!editTeamProject) return;
+    try {
+      setLoading(true);
+      // Map selected employeeIds to backend _ids
+      const memberObjectIds = editTeamSelected.map(eid => {
+        const found = employees.find(emp => emp.employeeId === eid || emp._id === eid);
+        return found?._id;
+      }).filter(Boolean);
+      await updateProjectTeam(editTeamProject._id, memberObjectIds);
+      const projRes = await fetchProjects();
+      setProjects(projRes.data.projects || []);
+      // Update selectedProject / editTeamProject references
+      const refreshed = projRes.data.projects.find(p => p._id === editTeamProject._id);
+      if (refreshed) {
+        setEditTeamProject(refreshed);
+        if (selectedProject && selectedProject._id === refreshed._id) setSelectedProject(refreshed);
+      }
+      setShowEditTeam(false);
+    } catch (e) {
+      setError(e.response?.data?.message || 'Failed to update team');
+    } finally { setLoading(false); }
+  };
+
   const stats = getProjectStats();
 
   return (
@@ -365,6 +413,9 @@ const Dashboard = () => {
               <div className="project-actions">
                 <button className="action-btn secondary" onClick={() => handleTeamView(project)}>
                   <span>👥</span> Team
+                </button>
+                <button className="action-btn secondary" onClick={() => openEditTeam(project)}>
+                  ✏️ Edit Team
                 </button>
                 {project.githubLink && (
                   <a 
@@ -597,6 +648,50 @@ const Dashboard = () => {
                   </div>
                 );
               })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showEditTeam && editTeamProject && (
+        <div className="modal-overlay">
+          <div className="modal">
+            <div className="modal-header">
+              <h3>Edit Team - {editTeamProject.name}</h3>
+              <button className="close-btn" onClick={() => setShowEditTeam(false)}>×</button>
+            </div>
+            <div className="project-form">
+              <div className="form-section">
+                <h4>Select / Deselect Members</h4>
+                <p className="section-description">Click to toggle membership. Save to apply changes.</p>
+                <div className="employees-grid">
+                  {employees.map(emp => {
+                    const selected = editTeamSelected.includes(emp.employeeId);
+                    return (
+                      <div key={emp._id}
+                        className={`employee-card ${selected ? 'selected' : ''}`}
+                        onClick={() => toggleEditTeamMember(emp.employeeId)}>
+                        <div className="employee-avatar">
+                          <img src={emp.photo || 'https://via.placeholder.com/80'} alt={emp.name} />
+                          <div className="avatar-status"></div>
+                        </div>
+                        <div className="employee-info">
+                          <h5 className="employee-name">{emp.name}</h5>
+                          <span className="employee-department">{getDisplayDepartment(emp)}</span>
+                          <span className="employee-email">{emp.email}</span>
+                        </div>
+                        {selected && <div className="selection-check"><span>✓</span></div>}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+              <div className="modal-actions">
+                <button type="button" className="btn-cancel" onClick={() => setShowEditTeam(false)}>Cancel</button>
+                <button type="button" className="btn-submit" disabled={loading} onClick={saveEditTeam}>
+                  {loading ? 'Saving...' : 'Save Team'}
+                </button>
+              </div>
             </div>
           </div>
         </div>
