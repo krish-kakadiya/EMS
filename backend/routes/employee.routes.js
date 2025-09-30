@@ -4,19 +4,22 @@ import {
   deleteEmployee, 
   getAllEmployees, 
   monthlyPay, 
-  exportEmployees   // ✅ import new controller
+  exportEmployees,
+  listSimpleEmployees
 } from "../controller/employee.controller.js";
 
-import { adminRoutes, protectedRoutes } from "../middleware/auth.middleware.js";
+import { protectedRoutes, authorizeRoles } from "../middleware/auth.middleware.js";
 
 const employeeRoute = express.Router();
 
-employeeRoute.post("/create", protectedRoutes, adminRoutes, createEmployee);
-employeeRoute.get("/", protectedRoutes, adminRoutes, getAllEmployees);
-employeeRoute.delete("/:id", protectedRoutes, adminRoutes, deleteEmployee);
-employeeRoute.get("/monthly-pay", protectedRoutes, adminRoutes, monthlyPay);
+// HR only operations
+employeeRoute.post("/create", protectedRoutes, authorizeRoles('hr'), createEmployee);
+employeeRoute.get("/", protectedRoutes, authorizeRoles('hr'), getAllEmployees);
+employeeRoute.delete("/:id", protectedRoutes, authorizeRoles('hr'), deleteEmployee);
+employeeRoute.get("/monthly-pay", protectedRoutes, authorizeRoles('hr'), monthlyPay);
+employeeRoute.get("/export", protectedRoutes, authorizeRoles('hr'), exportEmployees);
 
-// ✅ New route for Excel export
-employeeRoute.get("/export", protectedRoutes, adminRoutes, exportEmployees);
+// Lightweight list for PM assignment (HR or PM can view)
+employeeRoute.get("/simple/list", protectedRoutes, authorizeRoles('hr','pm'), listSimpleEmployees);
 
 export default employeeRoute;
