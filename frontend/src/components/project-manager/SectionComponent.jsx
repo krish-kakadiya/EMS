@@ -24,12 +24,14 @@ const SectionComponent = () => {
         >
           ✅ Task Management
         </button>
+        {/* Teams tab removed per latest requirement: inline team selection in project creation only */}
       </div>
 
       {/* Main Content */}
       <div className="content-area">
-        {activePage === "dashboard" && <Dashboard />}
-        {activePage === "task" && <TaskManagement />}
+  {activePage === "dashboard" && <Dashboard />}
+  {activePage === "task" && <TaskManagement />}
+  {/* Teams view removed: team selection occurs inside project creation modal */}
       </div>
     </div>
   );

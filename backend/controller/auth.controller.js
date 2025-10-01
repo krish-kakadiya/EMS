@@ -1,6 +1,7 @@
 import User from "../model/user.model.js";
 import Counter from "../model/counter.model.js";
 import Salary from "../model/salary.model.js";
+import Profile from "../model/profile.model.js";
 
 // const createAdmin = async (req, res) => {
 //   try {
@@ -135,7 +136,7 @@ export const login = async (req,res)=>{
 export const me = async (req, res) => {
   try {
     // Fetch user (excluding password)
-    const user = await User.findById(req.user.id).select("-password");
+  const user = await User.findById(req.user.id).select("-password");
     if (!user) {
       return res.status(404).json({
         success: false,
@@ -143,14 +144,27 @@ export const me = async (req, res) => {
       });
     }
 
-    // Fetch salary linked to this user
-    const salary = await Salary.findOne({ user: user._id });
+    // Fetch salary and profile
+    const [salary, profile] = await Promise.all([
+      Salary.findOne({ user: user._id }),
+      Profile.findOne({ user: user._id })
+    ]);
 
     res.json({
       success: true,
       user: {
         ...user.toObject(),
         salary: salary ? { basic: salary.basic } : null,
+        profile: profile ? {
+          gender: profile.gender || null,
+          maritalStatus: profile.maritalStatus || null,
+          dob: profile.dob || null,
+          phone: profile.phone || null,
+          joiningDate: profile.joiningDate || null,
+          address: profile.address || null,
+          profilePicture: profile.profilePicture || null,
+          _id: profile._id
+        } : null,
       },
     });
   } catch (error) {

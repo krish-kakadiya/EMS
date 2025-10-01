@@ -76,8 +76,8 @@ import ExcelJS from "exceljs";
       return res.status(201).json({
         success: true,
         message: "Employee created successfully",
-        employeeId,
-        rawPassword, // ⚠️ return only if needed; otherwise avoid for security
+        employeeId
+        // NOTE: We intentionally do NOT return the raw password for security reasons.
       });
 
     } catch (error) {
@@ -338,4 +338,20 @@ export const updateEmployeeSalary = async (req, res) => {
 
 
 
-  export { createEmployee, getAllEmployees, deleteEmployee, monthlyPay };
+// Lightweight list for PM assignment etc.
+const listSimpleEmployees = async (req, res) => {
+  try {
+    // Pull designation if profile exists
+    const users = await User.aggregate([
+      { $match: { role: { $ne: 'hr' } } },
+      { $lookup: { from: 'profiles', localField: '_id', foreignField: 'user', as: 'profile' } },
+      { $unwind: { path: '$profile', preserveNullAndEmptyArrays: true } },
+  { $project: { _id:1, employeeId:1, name:1, role:1, department:1, designation: '$profile.designation' } }
+    ]);
+    return res.status(200).json({ success: true, employees: users });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: 'Error fetching employees', error: error.message });
+  }
+};
+
+  export { createEmployee, getAllEmployees, deleteEmployee, monthlyPay, listSimpleEmployees };

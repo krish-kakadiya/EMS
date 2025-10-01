@@ -1,144 +1,33 @@
-import React, { useState } from 'react';
-import "./Dashboard.css"
+import React, { useState, useEffect } from 'react';
+import { formatDDMMYY } from '../../utils/dateFormat.js';
+import "./Dashboard.css";
+import ProjectChat from './ProjectChat';
+import { 
+  fetchProjects, 
+  createProject as apiCreateProject, 
+  fetchSimpleEmployees,
+  fetchTasks,
+  updateProjectTeam
+} from '../../axios/projectTaskApi';
 
 const Dashboard = () => {
-  const [projects, setProjects] = useState([
-    {
-      id: 'PRJ001',
-      name: 'E-commerce Website',
-      client: 'ABC Corp',
-      startDate: '2024-01-15',
-      endDate: '2024-04-15',
-      duration: '90 days',
-      status: 'In Progress',
-      description: 'Complete e-commerce solution with payment gateway',
-      technologies: ['React', 'Node.js', 'MongoDB'],
-      githubLink: 'https://github.com/company/ecommerce-project',
-      projectType: 'Web Application',
-      teamMembers: ['EMP001', 'EMP002', 'EMP003'],
-      tasks: {
-        completed: 8,
-        total: 12
-      }
-    },
-    {
-      id: 'PRJ002',
-      name: 'Mobile Banking App',
-      client: 'XYZ Bank',
-      startDate: '2024-02-01',
-      endDate: '2024-06-01',
-      duration: '120 days',
-      status: 'Completed',
-      description: 'Secure mobile banking application',
-      technologies: ['React Native', 'Firebase', 'AWS'],
-      githubLink: 'https://github.com/company/mobile-banking',
-      projectType: 'Mobile App',
-      teamMembers: ['EMP004', 'EMP005', 'EMP006', 'EMP007'],
-      tasks: {
-        completed: 15,
-        total: 15
-      }
-    },
-    {
-      id: 'PRJ003',
-      name: 'CRM System',
-      client: 'DEF Ltd',
-      startDate: '2024-03-01',
-      endDate: '2024-05-30',
-      duration: '90 days',
-      status: 'Pending',
-      description: 'Customer relationship management system',
-      technologies: ['Vue.js', 'Laravel', 'MySQL'],
-      githubLink: 'https://github.com/company/crm-system',
-      projectType: 'Web Application',
-      teamMembers: ['EMP008', 'EMP009'],
-      tasks: {
-        completed: 0,
-        total: 8
-      }
-    }
-  ]);
-
-  const [employees] = useState([
-    { 
-      id: 'EMP001', 
-      name: 'John Doe', 
-      department: 'Frontend Development',
-      photo: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face',
-      email: 'john.doe@company.com',
-      role: 'Senior Developer'
-    },
-    { 
-      id: 'EMP002', 
-      name: 'Jane Smith', 
-      department: 'UI/UX Design',
-      photo: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&h=150&fit=crop&crop=face',
-      email: 'jane.smith@company.com',
-      role: 'Lead Designer'
-    },
-    { 
-      id: 'EMP003', 
-      name: 'Mike Johnson', 
-      department: 'Backend Development',
-      photo: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&h=150&fit=crop&crop=face',
-      email: 'mike.johnson@company.com',
-      role: 'Backend Developer'
-    },
-    { 
-      id: 'EMP004', 
-      name: 'Sarah Wilson', 
-      department: 'Full Stack Development',
-      photo: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=150&h=150&fit=crop&crop=face',
-      email: 'sarah.wilson@company.com',
-      role: 'Full Stack Developer'
-    },
-    { 
-      id: 'EMP005', 
-      name: 'David Brown', 
-      department: 'DevOps',
-      photo: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face',
-      email: 'david.brown@company.com',
-      role: 'DevOps Engineer'
-    },
-    { 
-      id: 'EMP006', 
-      name: 'Emma Davis', 
-      department: 'QA Testing',
-      photo: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&h=150&fit=crop&crop=face',
-      email: 'emma.davis@company.com',
-      role: 'QA Engineer'
-    },
-    { 
-      id: 'EMP007', 
-      name: 'Alex Thompson', 
-      department: 'Project Management',
-      photo: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=150&h=150&fit=crop&crop=face',
-      email: 'alex.thompson@company.com',
-      role: 'Project Manager'
-    },
-    { 
-      id: 'EMP008', 
-      name: 'Lisa Garcia', 
-      department: 'Data Analysis',
-      photo: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150&h=150&fit=crop&crop=face',
-      email: 'lisa.garcia@company.com',
-      role: 'Data Analyst'
-    },
-    { 
-      id: 'EMP009', 
-      name: 'Chris Lee', 
-      department: 'System Admin',
-      photo: 'https://images.unsplash.com/photo-1519345182560-3f2917c472ef?w=150&h=150&fit=crop&crop=face',
-      email: 'chris.lee@company.com',
-      role: 'System Administrator'
-    }
-  ]);
+  const [projects, setProjects] = useState([]);
+  const [employees, setEmployees] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [tasks, setTasks] = useState([]);
+  const [error, setError] = useState(null);
 
   const [showAddProject, setShowAddProject] = useState(false);
   const [showTeamView, setShowTeamView] = useState(false);
+  const [showEditTeam, setShowEditTeam] = useState(false);
+  const [showChat, setShowChat] = useState(false);
+  const [chatProject, setChatProject] = useState(null);
   const [selectedProject, setSelectedProject] = useState(null);
+  const [editTeamProject, setEditTeamProject] = useState(null);
+  const [editTeamSelected, setEditTeamSelected] = useState([]);
   const [selectedEmployees, setSelectedEmployees] = useState([]);
   const [activeFilter, setActiveFilter] = useState('All');
+  const [currentUser, setCurrentUser] = useState(null);
 
   const [newProject, setNewProject] = useState({
     name: '',
@@ -178,10 +67,28 @@ const Dashboard = () => {
     return Math.round((completedTasks / totalTasks) * 100);
   };
 
-  const generateProjectId = () => {
-    const nextId = projects.length + 1;
-    return `PRJ${nextId.toString().padStart(3, '0')}`;
-  };
+  useEffect(() => {
+    const load = async () => {
+      try {
+        setLoading(true);
+        const [projRes, empRes, taskRes] = await Promise.all([
+          fetchProjects(),
+          fetchSimpleEmployees(),
+          fetchTasks()
+        ]);
+        setProjects(projRes.data.projects || []);
+        setEmployees(empRes.data.employees || []);
+        setTasks(taskRes.data.tasks || []);
+        
+        if (empRes.data.employees && empRes.data.employees.length > 0) {
+          setCurrentUser(empRes.data.employees[0]);
+        }
+      } catch (e) {
+        setError(e.response?.data?.message || 'Failed to load dashboard data');
+      } finally { setLoading(false); }
+    };
+    load();
+  }, []);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -207,58 +114,155 @@ const Dashboard = () => {
     });
   };
 
-  const handleAddProject = (e) => {
+  const handleAddProject = async (e) => {
     e.preventDefault();
-    const project = {
-      ...newProject,
-      id: generateProjectId(),
-      duration: calculateDuration(newProject.startDate, newProject.endDate),
-      status: 'Pending',
-      technologies: newProject.technologies.split(', ').filter(tech => tech.trim()),
-      teamMembers: selectedEmployees,
-      tasks: {
-        completed: 0,
-        total: 0
-      }
-    };
-    setProjects([...projects, project]);
-    setNewProject({
-      name: '',
-      client: '',
-      startDate: '',
-      endDate: '',
-      description: '',
-      technologies: '',
-      githubLink: '',
-      projectType: 'Web Application'
-    });
-    setSelectedEmployees([]);
-    setShowAddProject(false);
+    try {
+      setLoading(true);
+      const teamMemberObjectIds = selectedEmployees.map(eid => {
+        const found = employees.find(emp => emp.employeeId === eid || emp._id === eid);
+        return found?._id;
+      }).filter(Boolean);
+      await apiCreateProject({
+        name: newProject.name,
+        client: newProject.client,
+        description: newProject.description,
+        startDate: newProject.startDate || undefined,
+        endDate: newProject.endDate || undefined,
+        teamMembers: teamMemberObjectIds
+      });
+      const projRes = await fetchProjects();
+      setProjects(projRes.data.projects || []);
+      setNewProject({
+        name: '',
+        client: '',
+        startDate: '',
+        endDate: '',
+        description: '',
+        technologies: '',
+        githubLink: '',
+        projectType: 'Web Application'
+      });
+      setSelectedEmployees([]);
+      setShowAddProject(false);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to create project');
+    } finally { setLoading(false); }
+  };
+
+  const normalizeStatus = (s='') => {
+    const map = { 'pending':'Pending', 'in-progress':'In Progress', 'completed':'Completed', 'on-hold':'On Hold' };
+    return map[s] || s;
   };
 
   const getProjectStats = () => {
-    const pending = projects.filter(p => p.status === 'Pending').length;
-    const working = projects.filter(p => p.status === 'In Progress').length;
-    const completed = projects.filter(p => p.status === 'Completed').length;
+    const pending = projects.filter(p => (p.status||'').toLowerCase()==='pending').length;
+    const working = projects.filter(p => (p.status||'').toLowerCase()==='in-progress').length;
+    const completed = projects.filter(p => (p.status||'').toLowerCase()==='completed').length;
     const total = projects.length;
     return { pending, working, completed, total };
   };
 
+  const getProjectTaskSummary = (project) => {
+    const pid = project._id || project.id;
+    const projectTasks = tasks.filter(t => {
+      if (!t.project) return false;
+      const tp = t.project._id || t.project.id || t.project;
+      return tp === pid;
+    });
+    const total = projectTasks.length;
+    const completed = projectTasks.filter(t => t.status === 'completed').length;
+    const inProgress = projectTasks.filter(t => t.status === 'in-progress').length;
+    const notStarted = projectTasks.filter(t => t.status === 'not-started').length;
+    const onHold = projectTasks.filter(t => t.status === 'on-hold').length;
+    return { total, completed, inProgress, notStarted, onHold, progress: calculateProgress(completed, total) };
+  };
+
   const getFilteredProjects = () => {
     if (activeFilter === 'All') return projects;
-    if (activeFilter === 'Active') return projects.filter(p => p.status === 'In Progress');
-    if (activeFilter === 'Pending') return projects.filter(p => p.status === 'Pending');
-    if (activeFilter === 'Completed') return projects.filter(p => p.status === 'Completed');
+    if (activeFilter === 'Active') return projects.filter(p => normalizeStatus(p.status) === 'In Progress');
+    if (activeFilter === 'Pending') return projects.filter(p => normalizeStatus(p.status) === 'Pending');
+    if (activeFilter === 'Completed') return projects.filter(p => normalizeStatus(p.status) === 'Completed');
     return projects;
   };
 
   const getEmployeeById = (employeeId) => {
-    return employees.find(emp => emp.id === employeeId);
+    return employees.find(emp => emp.employeeId === employeeId || emp._id === employeeId);
+  };
+
+  const getDisplayDepartment = (employee) => {
+    if (!employee) return 'Department not set';
+    const dept = employee.department?.trim();
+    if (dept && dept.toLowerCase() !== 'employee') return dept;
+    const designation = employee.designation?.trim();
+    if (designation) return designation;
+    const role = employee.role?.trim();
+    if (role && role.toLowerCase() !== 'employee') return role;
+    return 'Department not set';
   };
 
   const handleTeamView = (project) => {
     setSelectedProject(project);
     setShowTeamView(true);
+  };
+
+  const handleChatOpen = (project) => {
+    setChatProject(project);
+    setShowChat(true);
+  };
+
+  const getActiveTaskCount = (employee, project) => {
+    if (!employee || !project) return 0;
+    const pid = project._id || project.id;
+    return tasks.filter(t => {
+      if (!t.project || t.status !== 'in-progress') return false;
+      const tp = t.project._id || t.project.id || t.project;
+      if (tp !== pid) return false;
+      return (t.assignedTo || []).some(a => {
+        if (typeof a === 'string') return a === employee._id;
+        return (a._id === employee._id);
+      });
+    }).length;
+  };
+
+  const openEditTeam = (project) => {
+    setEditTeamProject(project);
+    const existing = (project.teamMembers || []).map(m => {
+      if (typeof m === 'string') {
+        const emp = employees.find(e => e._id === m || e.employeeId === m);
+        return emp?.employeeId || emp?._id || m;
+      }
+      return m.employeeId || m._id;
+    }).filter(Boolean);
+    setEditTeamSelected(existing);
+    setShowEditTeam(true);
+  };
+
+  const toggleEditTeamMember = (employeeId) => {
+    setEditTeamSelected(prev => prev.includes(employeeId)
+      ? prev.filter(id => id !== employeeId)
+      : [...prev, employeeId]);
+  };
+
+  const saveEditTeam = async () => {
+    if (!editTeamProject) return;
+    try {
+      setLoading(true);
+      const memberObjectIds = editTeamSelected.map(eid => {
+        const found = employees.find(emp => emp.employeeId === eid || emp._id === eid);
+        return found?._id;
+      }).filter(Boolean);
+      await updateProjectTeam(editTeamProject._id, memberObjectIds);
+      const projRes = await fetchProjects();
+      setProjects(projRes.data.projects || []);
+      const refreshed = projRes.data.projects.find(p => p._id === editTeamProject._id);
+      if (refreshed) {
+        setEditTeamProject(refreshed);
+        if (selectedProject && selectedProject._id === refreshed._id) setSelectedProject(refreshed);
+      }
+      setShowEditTeam(false);
+    } catch (e) {
+      setError(e.response?.data?.message || 'Failed to update team');
+    } finally { setLoading(false); }
   };
 
   const stats = getProjectStats();
@@ -273,11 +277,13 @@ const Dashboard = () => {
         <button 
           className="add-project-btn"
           onClick={() => setShowAddProject(true)}
+          disabled={loading}
         >
-          <span className="btn-text">Add New Project</span>
+          <span className="btn-text">{loading ? 'Loading...' : 'Add New Project'}</span>
           <div className="btn-shine"></div>
         </button>
       </div>
+      {error && <div className="error-banner">{error}</div>}
 
       <div className="stats-container">
         <div className="stat-card">
@@ -342,24 +348,28 @@ const Dashboard = () => {
         </div>
         
         <div className="projects-grid">
-          {getFilteredProjects().map((project) => (
-            <div key={project.id} className="project-card">
+          {getFilteredProjects().map((project) => {
+            const projectIdDisplay = project.code || project._id || '—';
+            const teamMembersArr = project.teamMembers || [];
+            const summary = getProjectTaskSummary(project);
+            return (
+            <div key={project._id || project.code} className="project-card">
               <div className="project-card-header">
                 <div className="project-title">
                   <div>
                     <h4>{project.name}</h4>
-                    <span className="project-type">{project.projectType}</span>
+                    {project.projectType && <span className="project-type">{project.projectType}</span>}
                   </div>
                 </div>
-                <span className={`status-badge ${project.status.toLowerCase().replace(' ', '-')}`}>
-                  {project.status}
+                <span className={`status-badge ${(normalizeStatus(project.status)).toLowerCase().replace(' ', '-')}`}>
+                  {normalizeStatus(project.status)}
                 </span>
               </div>
               
               <div className="project-meta">
                 <div className="meta-item">
                   <span className="meta-label">Project ID</span>
-                  <span className="meta-value">{project.id}</span>
+                  <span className="meta-value">{projectIdDisplay}</span>
                 </div>
                 <div className="meta-item">
                   <span className="meta-label">Client</span>
@@ -370,16 +380,21 @@ const Dashboard = () => {
               <div className="project-progress">
                 <div className="progress-header">
                   <span>Progress</span>
-                  <span className="progress-percentage">
-                    {calculateProgress(project.tasks.completed, project.tasks.total)}%
-                  </span>
+                  <span className="progress-percentage">{summary.progress}%</span>
                 </div>
                 <div className="progress-bar">
                   <div 
                     className="progress-fill" 
-                    style={{ width: `${calculateProgress(project.tasks.completed, project.tasks.total)}%` }}
+                    style={{ width: `${summary.progress}%` }}
                   ></div>
                 </div>
+                {summary.total > 0 && (
+                  <div className="progress-breakdown">
+                    <span className="pb-item">Pending: {summary.notStarted}</span>
+                    <span className="pb-item">Active: {summary.inProgress}</span>
+                    <span className="pb-item">Done: {summary.completed}</span>
+                  </div>
+                )}
               </div>
               
               <div className="project-details">
@@ -388,52 +403,75 @@ const Dashboard = () => {
                 <div className="project-info-grid">
                   <div className="info-item">
                     <span className="info-label">Duration</span>
-                    <span className="info-value">{project.duration}</span>
+                    <span className="info-value">{calculateDuration(project.startDate, project.endDate) || '—'}</span>
                   </div>
                   <div className="info-item">
                     <span className="info-label">Team Size</span>
-                    <span className="info-value">{project.teamMembers.length} members</span>
+                    <span className="info-value">{teamMembersArr.length} members</span>
                   </div>
                   <div className="info-item">
                     <span className="info-label">Start Date</span>
-                    <span className="info-value">{new Date(project.startDate).toLocaleDateString()}</span>
+                    <span className="info-value">{formatDDMMYY(project.startDate)}</span>
                   </div>
                   <div className="info-item">
                     <span className="info-label">End Date</span>
-                    <span className="info-value">{new Date(project.endDate).toLocaleDateString()}</span>
+                    <span className="info-value">{formatDDMMYY(project.endDate)}</span>
                   </div>
                 </div>
                 
-                <div className="tech-stack">
-                  <span className="tech-label">Technologies:</span>
-                  <div className="tech-tags">
-                    {project.technologies.map((tech, index) => (
-                      <span key={index} className="tech-tag">{tech}</span>
-                    ))}
+                {project.technologies && Array.isArray(project.technologies) && project.technologies.length > 0 && (
+                  <div className="tech-stack">
+                    <span className="tech-label">Technologies:</span>
+                    <div className="tech-tags">
+                      {project.technologies.map((tech, index) => (
+                        <span key={index} className="tech-tag">{tech}</span>
+                      ))}
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
               
               <div className="project-actions">
-                <button 
-                  className="action-btn secondary"
-                  onClick={() => handleTeamView(project)}
-                >
-                  <span>👥</span>
-                  Team
+                <div className="action-buttons-row">
+                  <button className="action-btn secondary" onClick={() => handleTeamView(project)}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                      <circle cx="9" cy="7" r="4"></circle>
+                      <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                      <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                    </svg>
+                    Team
+                  </button>
+                  <button className="action-btn secondary" onClick={() => openEditTeam(project)}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                    </svg>
+                    Edit
+                  </button>
+                  {project.githubLink && (
+                    <a 
+                      href={project.githubLink} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="action-btn secondary"
+                    >
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path>
+                      </svg>
+                      Repo
+                    </a>
+                  )}
+                </div>
+                <button className="action-btn chat-btn" onClick={() => handleChatOpen(project)}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                  </svg>
+                  Open Project Chat
                 </button>
-                <a 
-                  href={project.githubLink} 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="action-btn primary"
-                >
-                  <span>🔗</span>
-                  Repository
-                </a>
               </div>
             </div>
-          ))}
+          );})}
         </div>
       </div>
 
@@ -514,6 +552,7 @@ const Dashboard = () => {
                       type="date"
                       name="endDate"
                       value={newProject.endDate}
+                      min={newProject.startDate || undefined}
                       onChange={handleInputChange}
                       required
                     />
@@ -575,29 +614,26 @@ const Dashboard = () => {
                 <p className="section-description">Select team members for this project</p>
                 
                 <div className="employees-grid">
-                  {employees.map((employee) => (
-                    <div 
-                      key={employee.id} 
-                      className={`employee-card ${selectedEmployees.includes(employee.id) ? 'selected' : ''}`}
-                      onClick={() => handleEmployeeSelection(employee.id)}
-                    >
-                      <div className="employee-avatar">
-                        <img src={employee.photo} alt={employee.name} />
-                        <div className="avatar-status"></div>
-                      </div>
-                      <div className="employee-info">
-                        <h5 className="employee-name">{employee.name}</h5>
-                        <span className="employee-role">{employee.role}</span>
-                        <span className="employee-department">{employee.department}</span>
-                        <span className="employee-email">{employee.email}</span>
-                      </div>
-                      {selectedEmployees.includes(employee.id) && (
-                        <div className="selection-check">
-                          <span>✓</span>
+                    {employees.map((employee) => (
+                      <div
+                        key={employee._id}
+                        className={`employee-card ${selectedEmployees.includes(employee.employeeId) ? 'selected' : ''}`}
+                        onClick={() => handleEmployeeSelection(employee.employeeId)}
+                      >
+                        <div className="employee-avatar">
+                          <img src={employee.photo || 'https://via.placeholder.com/80'} alt={employee.name} />
+                          <div className="avatar-status"></div>
                         </div>
-                      )}
-                    </div>
-                  ))}
+                        <div className="employee-info">
+                          <h5 className="employee-name">{employee.name}</h5>
+                          <span className="employee-department">{getDisplayDepartment(employee)}</span>
+                          <span className="employee-email">{employee.email}</span>
+                        </div>
+                        {selectedEmployees.includes(employee.employeeId) && (
+                          <div className="selection-check"><span>✓</span></div>
+                        )}
+                      </div>
+                    ))}
                 </div>
               </div>
               
@@ -609,12 +645,8 @@ const Dashboard = () => {
                 >
                   Cancel
                 </button>
-                <button 
-                  type="button" 
-                  className="btn-submit"
-                  onClick={handleAddProject}
-                >
-                  Create Project
+                <button type="button" className="btn-submit" onClick={handleAddProject} disabled={loading}>
+                  {loading ? 'Saving...' : 'Create Project'}
                 </button>
               </div>
             </div>
@@ -636,28 +668,82 @@ const Dashboard = () => {
             </div>
             
             <div className="team-container">
-              {selectedProject.teamMembers.map((empId) => {
-                const employee = getEmployeeById(empId);
-                return employee ? (
-                  <div key={empId} className="team-member-card">
+              {(selectedProject.teamMembers || []).map((member) => {
+                const employee = typeof member === 'string' || typeof member === 'number'
+                  ? getEmployeeById(member)
+                  : member;
+                if (!employee) return null;
+                return (
+                  <div key={employee._id || employee.employeeId} className="team-member-card">
                     <div className="team-member-avatar">
-                      <img src={employee.photo} alt={employee.name} />
+                      <img src={employee.photo || 'https://via.placeholder.com/60'} alt={employee.name} />
                     </div>
                     <div className="member-info">
                       <h4>{employee.name}</h4>
-                      <p className="member-role">{employee.role}</p>
-                      <p className="member-department">{employee.department}</p>
+                      <p className="member-department">{getDisplayDepartment(employee)}</p>
                       <p className="member-email">{employee.email}</p>
                     </div>
                     <div className="member-stats">
-                      <span>Active Tasks: {Math.floor(Math.random() * 3) + 1}</span>
+                      <span>Active Tasks: {getActiveTaskCount(employee, selectedProject)}</span>
                     </div>
                   </div>
-                ) : null;
+                );
               })}
             </div>
           </div>
         </div>
+      )}
+
+      {showEditTeam && editTeamProject && (
+        <div className="modal-overlay">
+          <div className="modal">
+            <div className="modal-header">
+              <h3>Edit Team - {editTeamProject.name}</h3>
+              <button className="close-btn" onClick={() => setShowEditTeam(false)}>×</button>
+            </div>
+            <div className="project-form">
+              <div className="form-section">
+                <h4>Select / Deselect Members</h4>
+                <p className="section-description">Click to toggle membership. Save to apply changes.</p>
+                <div className="employees-grid">
+                  {employees.map(emp => {
+                    const selected = editTeamSelected.includes(emp.employeeId);
+                    return (
+                      <div key={emp._id}
+                        className={`employee-card ${selected ? 'selected' : ''}`}
+                        onClick={() => toggleEditTeamMember(emp.employeeId)}>
+                        <div className="employee-avatar">
+                          <img src={emp.photo || 'https://via.placeholder.com/80'} alt={emp.name} />
+                          <div className="avatar-status"></div>
+                        </div>
+                        <div className="employee-info">
+                          <h5 className="employee-name">{emp.name}</h5>
+                          <span className="employee-department">{getDisplayDepartment(emp)}</span>
+                          <span className="employee-email">{emp.email}</span>
+                        </div>
+                        {selected && <div className="selection-check"><span>✓</span></div>}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+              <div className="modal-actions">
+                <button type="button" className="btn-cancel" onClick={() => setShowEditTeam(false)}>Cancel</button>
+                <button type="button" className="btn-submit" disabled={loading} onClick={saveEditTeam}>
+                  {loading ? 'Saving...' : 'Save Team'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showChat && chatProject && (
+        <ProjectChat 
+          project={chatProject}
+          currentUser={currentUser}
+          onClose={() => setShowChat(false)}
+        />
       )}
     </div>
   );
