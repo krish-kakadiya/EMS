@@ -93,13 +93,81 @@ export const updateTask = async (req, res) => {
 
 export const updateTaskStatus = async (req, res) => {
   try {
-    const { status } = req.body;
+    const { status, message } = req.body;
     if (!['not-started','in-progress','completed','on-hold'].includes(status)) {
       return res.status(400).json({ success: false, message: 'Invalid status' });
     }
-    const task = await Task.findByIdAndUpdate(req.params.id, { status }, { new: true });
+    const task = await Task.findById(req.params.id);
     if (!task) return res.status(404).json({ success: false, message: 'Task not found' });
-    return res.json({ success: true, task });
+    task.status = status;
+    if (message) task.lastEmployeeMessage = message;
+    task.statusUpdates.push({ by: req.user.id, status, message });
+    await task.save();
+    // Populate after save so client (PM) sees fresh relations + last message
+    const populated = await Task.findById(task._id)
+      .populate('assignedTo', 'name employeeId role')
+      .populate('project', 'code name');
+    // Emit real-time event (global and project room if available)
+    try {
+      const io = req.app.get('io');
+      if (io) {
+        io.emit('taskUpdated', { task: populated });
+        if (populated.project?._id) {
+          io.to(`project:${populated.project._id}`).emit('taskUpdated', { task: populated });
+        }
+      }
+    } catch (e) {
+      console.warn('Socket emit failed', e.message);
+    }
+    return res.json({ success: true, task: populated });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: 'Error updating task status', error: error.message });
+  }
+};
+
+// Employee: list tasks assigned to them
+export const listMyTasks = async (req, res) => {
+  try {
+    const tasks = await Task.find({ assignedTo: req.user.id })
+      .populate('project', 'code name')
+      .populate('assignedTo', 'name employeeId');
+    return res.json({ success: true, tasks });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: 'Error fetching my tasks', error: error.message });
+  }
+};
+
+// Employee: update status + message for own task
+export const employeeUpdateTaskStatus = async (req, res) => {
+  try {
+    const { status, message } = req.body;
+    if (!['not-started','in-progress','completed','on-hold'].includes(status)) {
+      return res.status(400).json({ success: false, message: 'Invalid status' });
+    }
+    const task = await Task.findById(req.params.id);
+    if (!task) return res.status(404).json({ success: false, message: 'Task not found' });
+    if (!task.assignedTo.map(id => id.toString()).includes(req.user.id)) {
+      return res.status(403).json({ success: false, message: 'Not authorized for this task' });
+    }
+    task.status = status;
+    if (message) task.lastEmployeeMessage = message;
+    task.statusUpdates.push({ by: req.user.id, status, message });
+    await task.save();
+    const populated = await Task.findById(task._id)
+      .populate('assignedTo', 'name employeeId role')
+      .populate('project', 'code name');
+    try {
+      const io = req.app.get('io');
+      if (io) {
+        io.emit('taskUpdated', { task: populated });
+        if (populated.project?._id) {
+          io.to(`project:${populated.project._id}`).emit('taskUpdated', { task: populated });
+        }
+      }
+    } catch (e) {
+      console.warn('Socket emit failed', e.message);
+    }
+    return res.json({ success: true, task: populated });
   } catch (error) {
     return res.status(500).json({ success: false, message: 'Error updating task status', error: error.message });
   }
