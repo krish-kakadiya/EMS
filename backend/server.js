@@ -1,6 +1,7 @@
 import dotenv from 'dotenv';
 dotenv.config();
 import app from "./app.js";
+import { Server as SocketIOServer } from 'socket.io';
 import connectDB from './config/db.js';
 
 const port = process.env.PORT || 3000; // Align with frontend axios baseURL
@@ -12,6 +13,25 @@ const startServer = async () =>{
 
         const server = app.listen(port,()=>{
             console.log(`Server is running on: http://localhost:${port}`);
+        });
+
+        // Socket.IO setup
+        const io = new SocketIOServer(server, {
+            cors: {
+                origin: (process.env.CORS_ORIGINS || 'http://localhost:5173').split(',').map(o=>o.trim()),
+                credentials: true
+            }
+        });
+        app.set('io', io); // make io accessible in controllers via req.app.get('io')
+
+        io.on('connection', (socket) => {
+            // Optional: join room by project or user future usage
+            socket.on('joinProject', (projectId) => {
+                if (projectId) socket.join(`project:${projectId}`);
+            });
+            socket.on('joinUser', (userId) => {
+                if (userId) socket.join(`user:${userId}`);
+            });
         });
 
         const shutdown = (signal) => {

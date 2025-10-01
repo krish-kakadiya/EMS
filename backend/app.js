@@ -9,15 +9,23 @@ import salaryRoutes from './routes/salary.routes.js';
 import seedRouter from './routes/seed.routes.js';
 import projectRoutes from './routes/project.routes.js';
 import taskRoutes from './routes/task.routes.js';
+import profileRoutes from './routes/profile.routes.js';
 import helmet from 'helmet';
 import morgan from 'morgan';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
 const app = express();
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
-app.use(helmet());
+// Configure helmet with relaxed cross-origin resource policy so frontend (different port) can load images
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: 'cross-origin' }
+}));
 app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
 
 // Dynamic CORS origin allowlist via env (comma-separated) else fallback
@@ -43,6 +51,9 @@ app.use("/api/employees", salaryRoutes);
 app.use("/api/seed", seedRouter);
 app.use('/api/projects', projectRoutes);
 app.use('/api/tasks', taskRoutes);
+app.use('/api/profile', profileRoutes);
+// Static serve uploaded images
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Health check endpoint
 app.get('/health', (req,res)=> res.json({ status: 'ok', time: Date.now() }));
