@@ -9,9 +9,15 @@ import {
   clearMessages,
 } from "../../redux/slices/leaveSlice";
 import { getCurrentUser } from "../../redux/slices/authSlice";
+import api from "../../axios/api";
+import { fetchMyTasks, updateMyTaskStatus } from "../../redux/slices/employeeTasksSlice";
 import "./EmployeeProfile.css";
 
 const EmployeeProfile = () => {
+  // Derive API origin (remove trailing /api) for constructing absolute file URLs
+  const API_BASE = api.defaults.baseURL || '';
+  // Remove trailing /api (with or without slash) from the configured base URL
+  const API_ORIGIN = API_BASE.replace(/\/?api\/?$/i, '');
   const [profileImg, setProfileImg] = useState(null);
   const [showPassword, setShowPassword] = useState(false);
   const [activeSection, setActiveSection] = useState('profile');
@@ -19,9 +25,17 @@ const EmployeeProfile = () => {
   const [showStatusPopup, setShowStatusPopup] = useState(false);
   const [selectedTask, setSelectedTask] = useState(null);
   const [newStatus, setNewStatus] = useState('');
+  const [statusMessage, setStatusMessage] = useState('');
   const [taskFilter, setTaskFilter] = useState('all');
   const [selectedGender, setSelectedGender] = useState('');
   const [selectedMaritalStatus, setSelectedMaritalStatus] = useState('');
+  const [personalDetails, setPersonalDetails] = useState({
+    dob: '',
+    phone: '',
+    joiningDate: '',
+    address: ''
+  });
+  const [updatingProfile, setUpdatingProfile] = useState(false);
 
   const [leaveForm, setLeaveForm] = useState({
     type: "",
@@ -30,38 +44,59 @@ const EmployeeProfile = () => {
     toDate: "",
   });
 
-  const [tasks, setTasks] = useState([
-    {
-      id: 'TSK001',
-      title: 'UI Design for Task Dashboard',
-      description: 'Create a clean and responsive dashboard where users can add, edit, and delete tasks with priority levels.',
-      priority: 'HIGH',
-      assignedTo: ['yash bhesdiya', 'Jagdish Hadiyal'],
-      startDate: '15/10/25',
-      dueDate: '16/10/25',
-      status: 'not started'
-    }
-  ]);
+  // tasks will come from redux slice employeeTasks
 
   const { user } = useSelector((state) => state.auth);
+  const { tasks: myTasks, loading: myTasksLoading } = useSelector((state) => state.employeeTasks);
   const { myLeaves, loading, error, success } = useSelector(
     (state) => state.leave
   );
 
   const dispatch = useDispatch();
 
+  const [selectedImageFile, setSelectedImageFile] = useState(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
+
   const handleImageChange = (e) => {
     if (e.target.files && e.target.files[0]) {
-      const imageUrl = URL.createObjectURL(e.target.files[0]);
+      const file = e.target.files[0];
+      // Basic validation (optional enhancement)
+      if (!file.type.startsWith('image/')) {
+        alert('Please select an image file');
+        return;
+      }
+      // 2MB size limit example
+      if (file.size > 2 * 1024 * 1024) {
+        alert('Image size should be under 2MB');
+        return;
+      }
+      const imageUrl = URL.createObjectURL(file);
       setTempProfileImg(imageUrl);
+      setSelectedImageFile(file);
     }
   };
 
-  const handleSaveImage = () => {
-    if (tempProfileImg) {
-      setProfileImg(tempProfileImg);
-      alert("Profile image saved successfully!");
-      setTempProfileImg(null);
+  const handleSaveImage = async () => {
+    if (!selectedImageFile) return;
+    try {
+      setUploadingImage(true);
+      const fd = new FormData();
+      fd.append('photo', selectedImageFile);
+      const res = await api.post('/profile/me/photo', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+      if (res.data) {
+        // Prefer absolute URL returned by backend, else construct using path
+        const finalUrl = res.data.url
+          || (res.data.path ? (res.data.path.startsWith('http') ? res.data.path : `${API_ORIGIN}${res.data.path.startsWith('/') ? '' : '/'}${res.data.path}`) : null);
+        if (finalUrl) setProfileImg(finalUrl);
+        setTempProfileImg(null);
+        setSelectedImageFile(null);
+        dispatch(getCurrentUser());
+        alert('Profile image uploaded');
+      }
+    } catch (e) {
+      alert(e.response?.data?.message || e.message || 'Upload failed');
+    } finally {
+      setUploadingImage(false);
     }
   };
 
@@ -93,20 +128,96 @@ const EmployeeProfile = () => {
     });
   };
 
+  // ---------------- Personal Details Helpers ----------------
+  const handlePersonalChange = (e) => {
+    const { name, value } = e.target;
+    setPersonalDetails(prev => ({ ...prev, [name]: value }));
+  };
+
+  const toYMD = (value) => {
+    if (!value) return '';
+    try {
+      const d = new Date(value);
+      if (isNaN(d)) return '';
+      return d.toISOString().slice(0,10);
+    } catch {
+      return '';
+    }
+  };
+
+  const loadExistingProfile = () => {
+    const profile = user && typeof user.profile === 'object' ? user.profile : null;
+    if (profile) {
+      if (profile.gender) setSelectedGender(profile.gender);
+      if (profile.maritalStatus) setSelectedMaritalStatus(profile.maritalStatus);
+      setPersonalDetails(prev => ({
+        ...prev,
+        dob: toYMD(profile.dob),
+        phone: profile.phone || '',
+        joiningDate: toYMD(profile.joiningDate),
+        address: profile.address || ''
+      }));
+      if (profile.profilePicture) {
+        const pic = profile.profilePicture.startsWith('http')
+          ? profile.profilePicture
+          : `${API_ORIGIN}${profile.profilePicture.startsWith('/') ? '' : '/'}${profile.profilePicture}`;
+        setProfileImg(pic);
+      }
+    }
+  };
+
+  useEffect(() => {
+    loadExistingProfile();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
+
+  const handleUpdateProfile = async () => {
+    if (!selectedGender) {
+      alert('Please select gender');
+      return;
+    }
+    if (!selectedMaritalStatus) {
+      alert('Please select marital status');
+      return;
+    }
+    setUpdatingProfile(true);
+    try {
+      // Placeholder API call; adjust endpoint when backend route exists
+      const payload = {
+        gender: selectedGender,
+        maritalStatus: selectedMaritalStatus,
+        dob: personalDetails.dob || null,
+        phone: personalDetails.phone || null,
+        joiningDate: personalDetails.joiningDate || null,
+        address: personalDetails.address || ''
+      };
+      const res = await api.put('/profile/me', payload);
+      alert('Profile updated successfully');
+      // Optionally refresh user
+      dispatch(getCurrentUser());
+    } catch (e) {
+      alert(e.response?.data?.message || e.message);
+    } finally {
+      setUpdatingProfile(false);
+    }
+  };
+
   const handleTaskStatusChange = (task, status) => {
     setSelectedTask(task);
     setNewStatus(status);
+    setStatusMessage('');
     setShowStatusPopup(true);
   };
 
   const confirmStatusChange = () => {
     if (selectedTask) {
-      setTasks(tasks.map(task => 
-        task.id === selectedTask.id ? { ...task, status: newStatus } : task
-      ));
-      setShowStatusPopup(false);
-      setSelectedTask(null);
-      setNewStatus('');
+      dispatch(updateMyTaskStatus({ id: selectedTask._id, status: newStatus, message: statusMessage }))
+        .then(() => {
+          setShowStatusPopup(false);
+          setSelectedTask(null);
+          setNewStatus('');
+          setStatusMessage('');
+        });
     }
   };
 
@@ -116,20 +227,27 @@ const EmployeeProfile = () => {
     setNewStatus('');
   };
 
-  const getFilteredTasks = () => {
-    switch(taskFilter) {
-      case 'pending':
-        return tasks.filter(task => task.status === 'not started');
-      case 'active':
-        return tasks.filter(task => task.status === 'in progress');
-      case 'hold':
-        return tasks.filter(task => task.status === 'on hold');
-      case 'completed':
-        return tasks.filter(task => task.status === 'completed');
-      default:
-        return tasks;
+  const mapStatusForDisplay = (raw) => {
+    switch(raw) {
+      case 'not-started': return 'not started';
+      case 'in-progress': return 'in progress';
+      case 'on-hold': return 'on hold';
+      default: return raw || '';
     }
   };
+
+  const filteredTasks = React.useMemo(() => {
+    if (!Array.isArray(myTasks)) return [];
+    if (taskFilter === 'all') return myTasks;
+    return myTasks.filter(t => {
+      const normalized = mapStatusForDisplay(t.status);
+      if (taskFilter === 'pending') return normalized === 'not started';
+      if (taskFilter === 'active') return normalized === 'in progress';
+      if (taskFilter === 'hold') return normalized === 'on hold';
+      if (taskFilter === 'completed') return normalized === 'completed';
+      return true;
+    });
+  }, [myTasks, taskFilter]);
 
   const calculateSalary = (basicSalary) => {
     const allowances = basicSalary * 0.47;
@@ -180,6 +298,12 @@ const EmployeeProfile = () => {
     return status.split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
   };
 
+  useEffect(() => {
+    if (activeSection === 'tasks') {
+      dispatch(fetchMyTasks());
+    }
+  }, [activeSection, dispatch]);
+
   return (
     <div className="emp-profile-wrapper">
       <Sidebar activeSection={activeSection} setActiveSection={setActiveSection} />
@@ -199,7 +323,7 @@ const EmployeeProfile = () => {
               </div>
               <div className="status-popup-body">
                 <p>Are you sure you want to change the status of</p>
-                <p className="popup-task-title">"{selectedTask?.title}"</p>
+                <p className="popup-task-title">"{selectedTask?.name}"</p>
                 <p>to</p>
                 <span 
                   className="popup-status-badge"
@@ -211,6 +335,16 @@ const EmployeeProfile = () => {
                 >
                   {getStatusLabel(newStatus)}
                 </span>
+                <div className="status-message-wrapper">
+                  <label className="emp-form-label" style={{marginTop:'12px'}}>Message (optional)</label>
+                  <textarea
+                    value={statusMessage}
+                    onChange={(e)=>setStatusMessage(e.target.value)}
+                    placeholder="Add a short note about your update"
+                    rows={3}
+                    className="emp-form-textarea"
+                  />
+                </div>
               </div>
               <div className="status-popup-actions">
                 <button className="popup-cancel-btn" onClick={cancelStatusChange}>
@@ -235,6 +369,7 @@ const EmployeeProfile = () => {
                     src={tempProfileImg || profileImg || "https://avatar.iran.liara.run/public/17"}
                     alt="Profile"
                     className="emp-profile-photo"
+                    onError={(e) => { e.currentTarget.src = "https://avatar.iran.liara.run/public/17"; }}
                   />
                   <label className="emp-camera-overlay">
                     <FaCamera className="emp-camera-icon" />
@@ -247,8 +382,8 @@ const EmployeeProfile = () => {
                   </label>
                 </div>
                 {tempProfileImg && (
-                  <button className="emp-save-image-btn" onClick={handleSaveImage}>
-                    <FaSave /> Save Image
+                  <button className="emp-save-image-btn" onClick={handleSaveImage} disabled={uploadingImage}>
+                    <FaSave /> {uploadingImage ? 'Uploading...' : 'Save Image'}
                   </button>
                 )}
               </div>
@@ -357,15 +492,34 @@ const EmployeeProfile = () => {
                 </div>
                 <div className="emp-form-group">
                   <label className="emp-form-label">Date of Birth</label>
-                  <input type="date" className="emp-form-input" />
+                  <input 
+                    type="date" 
+                    name="dob" 
+                    value={personalDetails.dob}
+                    onChange={handlePersonalChange}
+                    className="emp-form-input" 
+                  />
                 </div>
                 <div className="emp-form-group">
                   <label className="emp-form-label">Phone Number</label>
-                  <input type="tel" placeholder="Enter phone number" className="emp-form-input" />
+                  <input 
+                    type="tel" 
+                    name="phone"
+                    value={personalDetails.phone}
+                    onChange={handlePersonalChange}
+                    placeholder="Enter phone number" 
+                    className="emp-form-input" 
+                  />
                 </div>
                 <div className="emp-form-group">
                   <label className="emp-form-label">Joining Date</label>
-                  <input type="date" className="emp-form-input" />
+                  <input 
+                    type="date" 
+                    name="joiningDate"
+                    value={personalDetails.joiningDate}
+                    onChange={handlePersonalChange}
+                    className="emp-form-input" 
+                  />
                 </div>
                 <div className="emp-form-group">
                   <label className="emp-form-label">Marital Status</label>
@@ -395,13 +549,18 @@ const EmployeeProfile = () => {
                 <div className="emp-form-group emp-full-width">
                   <label className="emp-form-label">Address</label>
                   <textarea 
+                    name="address"
+                    value={personalDetails.address}
+                    onChange={handlePersonalChange}
                     placeholder="Enter your complete address"
                     className="emp-form-textarea"
                     rows={3}
                   />
                 </div>
               </div>
-              <button className="emp-update-btn">Update Information</button>
+              <button className="emp-update-btn" onClick={handleUpdateProfile} disabled={updatingProfile}>
+                {updatingProfile ? 'Updating...' : 'Update Information'}
+              </button>
             </div>
           </div>
         )}
@@ -547,39 +706,41 @@ const EmployeeProfile = () => {
                 </div>
               </div>
               
-              {getFilteredTasks().length > 0 ? (
+              {myTasksLoading ? (
+                <div className="emp-no-tasks"><p>Loading tasks...</p></div>
+              ) : filteredTasks.length > 0 ? (
                 <div className="emp-tasks-container">
-                  {getFilteredTasks().map((task) => (
-                    <div key={task.id} className="emp-task-card">
+                  {filteredTasks.map((task) => (
+                    <div key={task._id} className="emp-task-card">
                       <div className="emp-task-header">
                         <div className="emp-task-header-left">
-                          <h4 className="emp-task-title">{task.title}</h4>
-                          <span className="emp-task-id">#{task.id}</span>
+                          <h4 className="emp-task-title">{task.name}</h4>
+                          <span className="emp-task-id">#{task.code}</span>
                         </div>
                         <span 
                           className="emp-task-priority"
                           style={{ 
-                            background: getPriorityColor(task.priority) + '20',
-                            color: getPriorityColor(task.priority),
-                            border: `1px solid ${getPriorityColor(task.priority)}40`
+                            background: getPriorityColor(task.priority?.toUpperCase()) + '20',
+                            color: getPriorityColor(task.priority?.toUpperCase()),
+                            border: `1px solid ${getPriorityColor(task.priority?.toUpperCase())}40`
                           }}
                         >
-                          {task.priority}
+                          {task.priority?.toUpperCase()}
                         </span>
                       </div>
-
                       <p className="emp-task-description">{task.description}</p>
+                      {task.lastEmployeeMessage && (
+                        <p className="emp-task-last-message"><strong>Your last note:</strong> {task.lastEmployeeMessage}</p>
+                      )}
 
                       <div className="emp-task-meta">
                         <div className="emp-task-assignees">
                           <span className="emp-meta-label">ASSIGNED TO:</span>
                           <div className="emp-assignees-list">
-                            {task.assignedTo.map((person, index) => (
-                              <div key={index} className="emp-assignee">
-                                <span className="emp-assignee-role">
-                                  {person.includes('yash') ? 'UI/UX DESIGNER' : 'FULL STACK DEVELOPER'}
-                                </span>
-                                <span className="emp-assignee-name">{person}</span>
+                            {task.assignedTo.map((person) => (
+                              <div key={person._id} className="emp-assignee">
+                                <span className="emp-assignee-role">{person.role?.toUpperCase()}</span>
+                                <span className="emp-assignee-name">{person.name}</span>
                               </div>
                             ))}
                           </div>
@@ -588,11 +749,11 @@ const EmployeeProfile = () => {
                         <div className="emp-task-dates">
                           <div className="emp-date-item">
                             <span className="emp-date-label">START:</span>
-                            <span className="emp-date-value">{task.startDate}</span>
+                            <span className="emp-date-value">{task.startDate ? new Date(task.startDate).toLocaleDateString() : '-'}</span>
                           </div>
                           <div className="emp-date-item">
                             <span className="emp-date-label">DUE:</span>
-                            <span className="emp-date-value">{task.dueDate}</span>
+                            <span className="emp-date-value">{task.dueDate ? new Date(task.dueDate).toLocaleDateString() : '-'}</span>
                           </div>
                         </div>
                       </div>
@@ -601,43 +762,43 @@ const EmployeeProfile = () => {
                         <label className="emp-status-label">Update Status:</label>
                         <div className="emp-status-buttons">
                           <button
-                            className={`emp-status-btn ${task.status === 'not started' ? 'active' : ''}`}
+                            className={`emp-status-btn ${mapStatusForDisplay(task.status) === 'not started' ? 'active' : ''}`}
                             style={{ 
-                              background: task.status === 'not started' ? getStatusColor('not started') : 'transparent',
-                              color: task.status === 'not started' ? 'white' : getStatusColor('not started'),
+                              background: mapStatusForDisplay(task.status) === 'not started' ? getStatusColor('not started') : 'transparent',
+                              color: mapStatusForDisplay(task.status) === 'not started' ? 'white' : getStatusColor('not started'),
                               borderColor: getStatusColor('not started')
                             }}
-                            onClick={() => handleTaskStatusChange(task, 'not started')}
+                            onClick={() => handleTaskStatusChange(task, 'not-started')}
                           >
                             Not Started
                           </button>
                           <button
-                            className={`emp-status-btn ${task.status === 'in progress' ? 'active' : ''}`}
+                            className={`emp-status-btn ${mapStatusForDisplay(task.status) === 'in progress' ? 'active' : ''}`}
                             style={{ 
-                              background: task.status === 'in progress' ? getStatusColor('in progress') : 'transparent',
-                              color: task.status === 'in progress' ? 'white' : getStatusColor('in progress'),
+                              background: mapStatusForDisplay(task.status) === 'in progress' ? getStatusColor('in progress') : 'transparent',
+                              color: mapStatusForDisplay(task.status) === 'in progress' ? 'white' : getStatusColor('in progress'),
                               borderColor: getStatusColor('in progress')
                             }}
-                            onClick={() => handleTaskStatusChange(task, 'in progress')}
+                            onClick={() => handleTaskStatusChange(task, 'in-progress')}
                           >
                             In Progress
                           </button>
                           <button
-                            className={`emp-status-btn ${task.status === 'on hold' ? 'active' : ''}`}
+                            className={`emp-status-btn ${mapStatusForDisplay(task.status) === 'on hold' ? 'active' : ''}`}
                             style={{ 
-                              background: task.status === 'on hold' ? getStatusColor('on hold') : 'transparent',
-                              color: task.status === 'on hold' ? 'white' : getStatusColor('on hold'),
+                              background: mapStatusForDisplay(task.status) === 'on hold' ? getStatusColor('on hold') : 'transparent',
+                              color: mapStatusForDisplay(task.status) === 'on hold' ? 'white' : getStatusColor('on hold'),
                               borderColor: getStatusColor('on hold')
                             }}
-                            onClick={() => handleTaskStatusChange(task, 'on hold')}
+                            onClick={() => handleTaskStatusChange(task, 'on-hold')}
                           >
                             On Hold
                           </button>
                           <button
-                            className={`emp-status-btn ${task.status === 'completed' ? 'active' : ''}`}
+                            className={`emp-status-btn ${mapStatusForDisplay(task.status) === 'completed' ? 'active' : ''}`}
                             style={{ 
-                              background: task.status === 'completed' ? getStatusColor('completed') : 'transparent',
-                              color: task.status === 'completed' ? 'white' : getStatusColor('completed'),
+                              background: mapStatusForDisplay(task.status) === 'completed' ? getStatusColor('completed') : 'transparent',
+                              color: mapStatusForDisplay(task.status) === 'completed' ? 'white' : getStatusColor('completed'),
                               borderColor: getStatusColor('completed')
                             }}
                             onClick={() => handleTaskStatusChange(task, 'completed')}

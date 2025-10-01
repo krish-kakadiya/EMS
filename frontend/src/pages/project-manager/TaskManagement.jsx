@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
+import { io } from 'socket.io-client';
 import { formatDDMMYY } from '../../utils/dateFormat.js';
 import "./TaskManagement.css";
 import { 
@@ -26,6 +27,8 @@ const TaskManagement = () => {
   const [editTask, setEditTask] = useState(null); // holds original task object
   const [showEditTask, setShowEditTask] = useState(false);
   const [editSelectedEmployees, setEditSelectedEmployees] = useState([]);
+  const socketRef = useRef(null);
+  const [realtimeEnabled, setRealtimeEnabled] = useState(true);
 
   const [newTask, setNewTask] = useState({
     name: '',
@@ -61,7 +64,7 @@ const TaskManagement = () => {
     return `${diffDays} days`;
   };
 
-  // Fetch initial data
+  // Fetch initial data & init socket
   useEffect(() => {
     const load = async () => {
       try {
@@ -80,6 +83,29 @@ const TaskManagement = () => {
       } finally { setLoading(false); }
     };
     load();
+    if (!socketRef.current) {
+      try {
+        const origin = window.location.origin.replace(/:\d+$/, ':3000');
+        socketRef.current = io(origin, { withCredentials: true });
+        socketRef.current.on('taskUpdated', ({ task }) => {
+          if (!realtimeEnabled || !task?._id) return;
+          setTasks(prev => {
+            const idx = prev.findIndex(t => t._id === task._id);
+            if (idx === -1) return [...prev, task];
+            const clone = [...prev];
+            clone[idx] = task;
+            return clone;
+          });
+        });
+      } catch (e) {
+        console.warn('Socket init failed', e.message);
+      }
+    }
+    return () => {
+      if (socketRef.current) {
+        socketRef.current.off('taskUpdated');
+      }
+    };
   }, []);
 
   const loadTasksForProject = async (projectId) => {
@@ -463,6 +489,12 @@ const TaskManagement = () => {
                   >
                     View Tasks
                   </button>
+                  <button
+                    className="action-btn secondary"
+                    onClick={async () => { await loadTasksForProject(project._id); }}
+                  >
+                    Refresh
+                  </button>
                   {/* Team management button removed; team chosen during project creation now */}
                 </div>
               </div>
@@ -479,12 +511,18 @@ const TaskManagement = () => {
                 <h3>Project Tasks</h3>
                 <span className="project-name">{getProjectName(selectedProject)}</span>
               </div>
-              <button 
-                className="close-btn"
-                onClick={() => setShowViewTasks(false)}
-              >
-                ×
-              </button>
+              <div style={{display:'flex', gap:'8px', alignItems:'center'}}>
+                <button className="close-btn" style={{background:'#0d6efd'}} onClick={async ()=> { await loadTasksForProject(selectedProject); }}>↻</button>
+                <label style={{fontSize:'12px',display:'flex',alignItems:'center',gap:'4px'}}>
+                  <input type="checkbox" checked={realtimeEnabled} onChange={e=> setRealtimeEnabled(e.target.checked)} /> Live
+                </label>
+                <button 
+                  className="close-btn"
+                  onClick={() => setShowViewTasks(false)}
+                >
+                  ×
+                </button>
+              </div>
             </div>
             
             <div className="tasks-filter">
@@ -538,6 +576,16 @@ const TaskManagement = () => {
                       <div className="task-description">
                         {task.description}
                       </div>
+                      {task.lastEmployeeMessage && (
+                        <div className="task-last-message">
+                          <strong>Last Update:</strong> {task.lastEmployeeMessage}
+                        </div>
+                      )}
+                      {task.statusUpdates && task.statusUpdates.length > 0 && (
+                        <div className="task-updates-meta">
+                          <small>{task.statusUpdates.length} update{task.statusUpdates.length>1?'s':''}</small>
+                        </div>
+                      )}
                       
                       <div className="task-assignees">
                         <span className="assignees-label">Assigned to:</span>
