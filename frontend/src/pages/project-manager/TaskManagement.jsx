@@ -29,6 +29,8 @@ const TaskManagement = () => {
   const [editSelectedEmployees, setEditSelectedEmployees] = useState([]);
   const socketRef = useRef(null);
   const [realtimeEnabled, setRealtimeEnabled] = useState(true);
+  const [lastUpdated, setLastUpdated] = useState(null);
+  const refreshIntervalRef = useRef(null);
 
   const [newTask, setNewTask] = useState({
     name: '',
@@ -64,6 +66,9 @@ const TaskManagement = () => {
     return `${diffDays} days`;
   };
 
+  // Helper to stamp last update time
+  const markUpdated = () => setLastUpdated(new Date());
+
   // Fetch initial data & init socket
   useEffect(() => {
     const load = async () => {
@@ -78,6 +83,7 @@ const TaskManagement = () => {
         setProjects(projRes.data.projects || []);
         setEmployees(empRes.data.employees || []);
         setTasks(taskRes.data.tasks || []);
+        markUpdated();
       } catch (e) {
         setError(e.response?.data?.message || 'Failed to load data');
       } finally { setLoading(false); }
@@ -89,13 +95,19 @@ const TaskManagement = () => {
         socketRef.current = io(origin, { withCredentials: true });
         socketRef.current.on('taskUpdated', ({ task }) => {
           if (!realtimeEnabled || !task?._id) return;
-          setTasks(prev => {
-            const idx = prev.findIndex(t => t._id === task._id);
-            if (idx === -1) return [...prev, task];
-            const clone = [...prev];
-            clone[idx] = task;
-            return clone;
-          });
+            setTasks(prev => {
+              const idx = prev.findIndex(t => t._id === task._id);
+              if (idx === -1) return [...prev, task];
+              const clone = [...prev];
+              clone[idx] = task;
+              return clone;
+            });
+            markUpdated();
+        });
+        socketRef.current.on('taskDeleted', ({ taskId }) => {
+          if (!realtimeEnabled || !taskId) return;
+          setTasks(prev => prev.filter(t => t._id !== taskId));
+          markUpdated();
         });
       } catch (e) {
         console.warn('Socket init failed', e.message);
@@ -104,9 +116,45 @@ const TaskManagement = () => {
     return () => {
       if (socketRef.current) {
         socketRef.current.off('taskUpdated');
+        socketRef.current.off('taskDeleted');
       }
     };
   }, []);
+
+  // Periodic polling when realtime is disabled
+  useEffect(() => {
+    // Clear existing interval
+    if (refreshIntervalRef.current) {
+      clearInterval(refreshIntervalRef.current);
+      refreshIntervalRef.current = null;
+    }
+    if (!realtimeEnabled) {
+      // Poll every 45s (balanced: not too chatty, reasonably fresh)
+      refreshIntervalRef.current = setInterval(async () => {
+        try {
+          // If a project is selected for modal view, refresh that project tasks only
+          if (selectedProject) {
+            await loadTasksForProject(selectedProject);
+          } else {
+            const all = await fetchTasks();
+            setTasks(prev => {
+              // Replace all tasks since we requested global list
+              return all.data.tasks || [];
+            });
+          }
+          markUpdated();
+        } catch (e) {
+          console.warn('Auto refresh failed', e.message);
+        }
+      }, 45000);
+    }
+    return () => {
+      if (refreshIntervalRef.current) {
+        clearInterval(refreshIntervalRef.current);
+        refreshIntervalRef.current = null;
+      }
+    };
+  }, [realtimeEnabled, selectedProject]);
 
   const loadTasksForProject = async (projectId) => {
     try {
@@ -489,12 +537,6 @@ const TaskManagement = () => {
                   >
                     View Tasks
                   </button>
-                  <button
-                    className="action-btn secondary"
-                    onClick={async () => { await loadTasksForProject(project._id); }}
-                  >
-                    Refresh
-                  </button>
                   {/* Team management button removed; team chosen during project creation now */}
                 </div>
               </div>
@@ -516,6 +558,9 @@ const TaskManagement = () => {
                 <label style={{fontSize:'12px',display:'flex',alignItems:'center',gap:'4px'}}>
                   <input type="checkbox" checked={realtimeEnabled} onChange={e=> setRealtimeEnabled(e.target.checked)} /> Live
                 </label>
+                {lastUpdated && (
+                  <span style={{fontSize:'11px', color:'#64748b'}}>Updated {lastUpdated.toLocaleTimeString()}</span>
+                )}
                 <button 
                   className="close-btn"
                   onClick={() => setShowViewTasks(false)}
