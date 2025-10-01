@@ -94,7 +94,7 @@ import ExcelJS from "exceljs";
     const employees = await User.aggregate([
       {
         $match: {
-          role: { $ne: "admin" }, // exclude admins
+          role: { $nin: ["hr","pm"] }, // exclude hr and pm
         },
       },
       {
