@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { formatDDMMYY } from '../../utils/dateFormat.js';
 import "./Dashboard.css";
+import ProjectChat from './ProjectChat';
 import { 
   fetchProjects, 
   createProject as apiCreateProject, 
@@ -10,20 +11,23 @@ import {
 } from '../../axios/projectTaskApi';
 
 const Dashboard = () => {
-  const [projects, setProjects] = useState([]); // loaded from backend
-  const [employees, setEmployees] = useState([]); // loaded from backend (simplified list)
+  const [projects, setProjects] = useState([]);
+  const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [tasks, setTasks] = useState([]); // all tasks for progress & active counts
+  const [tasks, setTasks] = useState([]);
   const [error, setError] = useState(null);
 
   const [showAddProject, setShowAddProject] = useState(false);
   const [showTeamView, setShowTeamView] = useState(false);
   const [showEditTeam, setShowEditTeam] = useState(false);
+  const [showChat, setShowChat] = useState(false);
+  const [chatProject, setChatProject] = useState(null);
   const [selectedProject, setSelectedProject] = useState(null);
   const [editTeamProject, setEditTeamProject] = useState(null);
-  const [editTeamSelected, setEditTeamSelected] = useState([]); // employeeIds
+  const [editTeamSelected, setEditTeamSelected] = useState([]);
   const [selectedEmployees, setSelectedEmployees] = useState([]);
   const [activeFilter, setActiveFilter] = useState('All');
+  const [currentUser, setCurrentUser] = useState(null);
 
   const [newProject, setNewProject] = useState({
     name: '',
@@ -31,9 +35,9 @@ const Dashboard = () => {
     startDate: '',
     endDate: '',
     description: '',
-    technologies: '', // front-end only (not persisted yet)
-    githubLink: '', // front-end only
-    projectType: 'Web Application' // front-end only
+    technologies: '',
+    githubLink: '',
+    projectType: 'Web Application'
   });
 
   const projectTypes = [
@@ -63,8 +67,6 @@ const Dashboard = () => {
     return Math.round((completedTasks / totalTasks) * 100);
   };
 
-
-  // Load data from backend
   useEffect(() => {
     const load = async () => {
       try {
@@ -72,11 +74,15 @@ const Dashboard = () => {
         const [projRes, empRes, taskRes] = await Promise.all([
           fetchProjects(),
           fetchSimpleEmployees(),
-          fetchTasks() // get all tasks at once
+          fetchTasks()
         ]);
         setProjects(projRes.data.projects || []);
         setEmployees(empRes.data.employees || []);
         setTasks(taskRes.data.tasks || []);
+        
+        if (empRes.data.employees && empRes.data.employees.length > 0) {
+          setCurrentUser(empRes.data.employees[0]);
+        }
       } catch (e) {
         setError(e.response?.data?.message || 'Failed to load dashboard data');
       } finally { setLoading(false); }
@@ -112,7 +118,6 @@ const Dashboard = () => {
     e.preventDefault();
     try {
       setLoading(true);
-      // Map selected employeeIds (employee.employeeId) to backend _ids
       const teamMemberObjectIds = selectedEmployees.map(eid => {
         const found = employees.find(emp => emp.employeeId === eid || emp._id === eid);
         return found?._id;
@@ -161,7 +166,7 @@ const Dashboard = () => {
     const pid = project._id || project.id;
     const projectTasks = tasks.filter(t => {
       if (!t.project) return false;
-      const tp = t.project._id || t.project.id || t.project; // populated or id
+      const tp = t.project._id || t.project.id || t.project;
       return tp === pid;
     });
     const total = projectTasks.length;
@@ -200,6 +205,11 @@ const Dashboard = () => {
     setShowTeamView(true);
   };
 
+  const handleChatOpen = (project) => {
+    setChatProject(project);
+    setShowChat(true);
+  };
+
   const getActiveTaskCount = (employee, project) => {
     if (!employee || !project) return 0;
     const pid = project._id || project.id;
@@ -207,7 +217,6 @@ const Dashboard = () => {
       if (!t.project || t.status !== 'in-progress') return false;
       const tp = t.project._id || t.project.id || t.project;
       if (tp !== pid) return false;
-      // assignedTo may be array of user objects or ids
       return (t.assignedTo || []).some(a => {
         if (typeof a === 'string') return a === employee._id;
         return (a._id === employee._id);
@@ -217,7 +226,6 @@ const Dashboard = () => {
 
   const openEditTeam = (project) => {
     setEditTeamProject(project);
-    // Normalize existing teamMembers to employeeId list
     const existing = (project.teamMembers || []).map(m => {
       if (typeof m === 'string') {
         const emp = employees.find(e => e._id === m || e.employeeId === m);
@@ -239,7 +247,6 @@ const Dashboard = () => {
     if (!editTeamProject) return;
     try {
       setLoading(true);
-      // Map selected employeeIds to backend _ids
       const memberObjectIds = editTeamSelected.map(eid => {
         const found = employees.find(emp => emp.employeeId === eid || emp._id === eid);
         return found?._id;
@@ -247,7 +254,6 @@ const Dashboard = () => {
       await updateProjectTeam(editTeamProject._id, memberObjectIds);
       const projRes = await fetchProjects();
       setProjects(projRes.data.projects || []);
-      // Update selectedProject / editTeamProject references
       const refreshed = projRes.data.projects.find(p => p._id === editTeamProject._id);
       if (refreshed) {
         setEditTeamProject(refreshed);
@@ -426,22 +432,43 @@ const Dashboard = () => {
               </div>
               
               <div className="project-actions">
-                <button className="action-btn secondary" onClick={() => handleTeamView(project)}>
-                  <span>👥</span> Team
+                <div className="action-buttons-row">
+                  <button className="action-btn secondary" onClick={() => handleTeamView(project)}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                      <circle cx="9" cy="7" r="4"></circle>
+                      <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                      <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                    </svg>
+                    Team
+                  </button>
+                  <button className="action-btn secondary" onClick={() => openEditTeam(project)}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                    </svg>
+                    Edit
+                  </button>
+                  {project.githubLink && (
+                    <a 
+                      href={project.githubLink} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="action-btn secondary"
+                    >
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path>
+                      </svg>
+                      Repo
+                    </a>
+                  )}
+                </div>
+                <button className="action-btn chat-btn" onClick={() => handleChatOpen(project)}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                  </svg>
+                  Open Project Chat
                 </button>
-                <button className="action-btn secondary" onClick={() => openEditTeam(project)}>
-                  ✏️ Edit Team
-                </button>
-                {project.githubLink && (
-                  <a 
-                    href={project.githubLink} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="action-btn primary"
-                  >
-                    <span>🔗</span> Repository
-                  </a>
-                )}
               </div>
             </div>
           );})}
@@ -642,7 +669,6 @@ const Dashboard = () => {
             
             <div className="team-container">
               {(selectedProject.teamMembers || []).map((member) => {
-                // member may be populated object or id; handle both
                 const employee = typeof member === 'string' || typeof member === 'number'
                   ? getEmployeeById(member)
                   : member;
@@ -710,6 +736,14 @@ const Dashboard = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {showChat && chatProject && (
+        <ProjectChat 
+          project={chatProject}
+          currentUser={currentUser}
+          onClose={() => setShowChat(false)}
+        />
       )}
     </div>
   );
