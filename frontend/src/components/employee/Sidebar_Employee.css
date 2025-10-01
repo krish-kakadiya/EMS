@@ -1,0 +1,222 @@
+/* Sidebar_Employee.css */
+.emp-sidebar {
+  position: fixed;
+  top: 110px; /* Space for navbar */
+  left: 20px;
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 70%);
+  width: 260px;
+  height: 265px; /* Full height minus navbar and margins */
+  border-radius: 20px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+  z-index: 900;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.emp-sidebar-content {
+  padding: 25px 15px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  height: 100%;
+  overflow-y: auto;
+}
+
+.emp-sidebar-item {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: rgba(255, 255, 255, 0.15);  /* frosted glass effect */
+  padding: 16px 14px;
+  border-radius: 16px;
+  font-size: 18px;
+  font-weight: 600;
+  color: #000;
+  cursor: pointer;
+  font-family: 'Segoe UI', sans-serif;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+  backdrop-filter: blur(6px);
+  transition: all 0.3s ease;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.emp-sidebar-item:hover {
+  background: rgba(255, 255, 255, 0.25);
+  transform: translateY(-1.5px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
+}
+
+.emp-sidebar-item.active {
+  background: rgba(255, 255, 255, 0.35);
+  transform: translateY(-1.5px);
+  box-shadow: 0 6px 15px rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+}
+
+.emp-sidebar-icon { 
+  font-size: 24px; 
+  flex-shrink: 0;
+}
+
+.emp-sidebar-item span,
+.emp-sidebar-icon {
+  transition: color 0.3s ease, transform 0.3s ease;
+}
+
+.emp-sidebar-item:hover .emp-sidebar-icon { 
+  transform: scale(1.1); 
+}
+
+/* Custom scrollbar for sidebar */
+.emp-sidebar-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.emp-sidebar-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.emp-sidebar-content::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 3px;
+}
+
+.emp-sidebar-content::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.5);
+}
+
+/* ===== Responsive Enhancements ===== */
+
+/* Tablet: gently shrink */
+@media (max-width: 992px) {
+  .emp-sidebar {
+    width: 200px;
+    left: 15px;
+  }
+  
+  .emp-sidebar-content {
+    padding: 18px 10px;
+    gap: 14px;
+  }
+  
+  .emp-sidebar-item {
+    font-size: 16px;
+    padding: 12px 10px;
+    gap: 12px;
+  }
+  
+  .emp-sidebar-icon { 
+    font-size: 20px; 
+  }
+}
+
+/* Medium tablets */
+@media (max-width: 768px) {
+  .emp-sidebar {
+    width: 180px;
+    left: 10px;
+  }
+  
+  .emp-sidebar-content {
+    padding: 15px 8px;
+    gap: 12px;
+  }
+  
+  .emp-sidebar-item {
+    font-size: 14px;
+    padding: 10px 8px;
+    gap: 10px;
+  }
+  
+  .emp-sidebar-icon { 
+    font-size: 18px; 
+  }
+}
+
+/* Mobile: turn into a slim bottom nav */
+@media (max-width: 600px) {
+  .emp-sidebar {
+    position: fixed;
+    bottom: 20px; 
+    left: 20px; 
+    right: 20px;
+    top: auto;
+    width: calc(100% - 40px);
+    height: 70px !important;
+    border-radius: 20px;
+    background: rgba(102, 126, 234, 0.95);
+    backdrop-filter: blur(8px);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+    z-index: 1000;
+  }
+
+  .emp-sidebar-content {
+    padding: 8px 6px !important;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-around;
+    gap: 8px !important;
+    height: 100%;
+  }
+
+  .emp-sidebar-item {
+    flex: 1 1 0;
+    min-width: 0;
+    margin: 0;
+    padding: 8px 4px !important;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 4px;
+    font-size: 12px !important;
+    font-weight: 500;
+    background: transparent !important;
+    border-radius: 12px;
+    box-shadow: none !important;
+    border: 1px solid rgba(255, 255, 255, 0.25);
+  }
+
+  .emp-sidebar-icon { 
+    font-size: 20px !important; 
+    line-height: 1; 
+  }
+
+  .emp-sidebar-item.active {
+    background: rgba(255, 255, 255, 0.25) !important;
+    box-shadow: none !important;
+  }
+
+  .emp-sidebar-item span {
+    font-size: 10px;
+    text-align: center;
+    line-height: 1.1;
+  }
+}
+
+/* Very small phones: icons only, even slimmer */
+@media (max-width: 400px) {
+  .emp-sidebar {
+    height: 60px !important;
+    bottom: 15px;
+    left: 15px;
+    right: 15px;
+    width: calc(100% - 30px);
+  }
+  
+  .emp-sidebar-content {
+    padding: 6px 4px !important;
+  }
+  
+  .emp-sidebar-item {
+    padding: 6px 2px !important;
+  }
+  
+  .emp-sidebar-item span { 
+    display: none; 
+  }
+  
+  .emp-sidebar-icon { 
+    font-size: 18px !important; 
+  }
+}
