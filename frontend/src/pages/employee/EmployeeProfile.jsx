@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
+import { io } from 'socket.io-client';
 import Navbar from "../../components/Navbar";
 import Sidebar from "../../components/employee/Sidebar_Employee";
 import { useSelector, useDispatch } from "react-redux";
@@ -10,7 +11,7 @@ import {
 } from "../../redux/slices/leaveSlice";
 import { getCurrentUser } from "../../redux/slices/authSlice";
 import api from "../../axios/api";
-import { fetchMyTasks, updateMyTaskStatus } from "../../redux/slices/employeeTasksSlice";
+import { fetchMyTasks, updateMyTaskStatus, deleteMyTask, leaveMyTask } from "../../redux/slices/employeeTasksSlice";
 import "./EmployeeProfile.css";
 
 const EmployeeProfile = () => {
@@ -53,6 +54,7 @@ const EmployeeProfile = () => {
   );
 
   const dispatch = useDispatch();
+  const socketRef = useRef(null);
 
   const [selectedImageFile, setSelectedImageFile] = useState(null);
   const [uploadingImage, setUploadingImage] = useState(false);
@@ -139,7 +141,7 @@ const EmployeeProfile = () => {
     try {
       const d = new Date(value);
       if (isNaN(d)) return '';
-      return d.toISOString().slice(0,10);
+      return d.toISOString().slice(0, 10);
     } catch {
       return '';
     }
@@ -228,7 +230,7 @@ const EmployeeProfile = () => {
   };
 
   const mapStatusForDisplay = (raw) => {
-    switch(raw) {
+    switch (raw) {
       case 'not-started': return 'not started';
       case 'in-progress': return 'in progress';
       case 'on-hold': return 'on hold';
@@ -304,10 +306,53 @@ const EmployeeProfile = () => {
     }
   }, [activeSection, dispatch]);
 
+  // Socket setup for real-time task updates/removals
+  useEffect(() => {
+    if (!user?._id) return; // wait for user
+    if (!socketRef.current) {
+      try {
+        const origin = (api.defaults.baseURL || 'http://localhost:3000/api').replace(/\/api\/?$/,'');
+        socketRef.current = io(origin, { withCredentials: true });
+        // Join user room for potential targeted events later
+        socketRef.current.emit('joinUser', user._id);
+      } catch (e) { console.warn('Socket init failed (employee)', e.message); }
+    }
+    const sock = socketRef.current;
+    if (!sock) return;
+
+    const handleTaskUpdated = ({ task }) => {
+      if (!task || !task._id) return;
+      // If user no longer in assignedTo, remove from local list
+      const stillAssigned = Array.isArray(task.assignedTo) && task.assignedTo.some(p => (p._id || p) === user._id);
+      if (!stillAssigned) {
+        // optimistic removal without refetch
+        // dispatch locally by filtering state via a mini action (reuse delete semantics)
+        // We'll dispatch a fake deleteMyTask fulfilled style using fetchMyTasks after slight delay optional
+        dispatch(fetchMyTasks());
+        return;
+      }
+      // If still assigned and tasks section active, refresh list to get updated assignees/messages
+      if (activeSection === 'tasks') {
+        dispatch(fetchMyTasks());
+      }
+    };
+    const handleTaskDeleted = ({ taskId }) => {
+      if (!taskId) return;
+      // Refresh to drop it if it belonged to user
+      dispatch(fetchMyTasks());
+    };
+    sock.on('taskUpdated', handleTaskUpdated);
+    sock.on('taskDeleted', handleTaskDeleted);
+    return () => {
+      sock.off('taskUpdated', handleTaskUpdated);
+      sock.off('taskDeleted', handleTaskDeleted);
+    };
+  }, [user, dispatch, activeSection]);
+
   return (
     <div className="emp-profile-wrapper">
       <Sidebar activeSection={activeSection} setActiveSection={setActiveSection} />
-      
+
       <div className="emp-profile-main-content">
         <Navbar />
 
@@ -325,9 +370,9 @@ const EmployeeProfile = () => {
                 <p>Are you sure you want to change the status of</p>
                 <p className="popup-task-title">"{selectedTask?.name}"</p>
                 <p>to</p>
-                <span 
+                <span
                   className="popup-status-badge"
-                  style={{ 
+                  style={{
                     background: getStatusColor(newStatus) + '20',
                     color: getStatusColor(newStatus),
                     border: `2px solid ${getStatusColor(newStatus)}`
@@ -336,10 +381,10 @@ const EmployeeProfile = () => {
                   {getStatusLabel(newStatus)}
                 </span>
                 <div className="status-message-wrapper">
-                  <label className="emp-form-label" style={{marginTop:'12px'}}>Message (optional)</label>
+                  <label className="emp-form-label" style={{ marginTop: '12px' }}>Message (optional)</label>
                   <textarea
                     value={statusMessage}
-                    onChange={(e)=>setStatusMessage(e.target.value)}
+                    onChange={(e) => setStatusMessage(e.target.value)}
                     placeholder="Add a short note about your update"
                     rows={3}
                     className="emp-form-textarea"
@@ -391,12 +436,12 @@ const EmployeeProfile = () => {
               <div className="emp-profile-info">
                 <h1 className="emp-name">{user?.name || "Employee Name"}</h1>
                 <p className="emp-details">
-                  <span className="emp-role">{user?.role || "Employee"}</span> • 
+                  <span className="emp-role">{user?.role || "Employee"}</span> •
                   <span className="emp-department">{user?.department || "Department"}</span>
                 </p>
                 <p className="emp-id">Employee ID: {user?.employeeId || "EMP001"}</p>
                 <p className="emp-email">{user?.email || "email@company.com"}</p>
-                
+
                 <div className="emp-salary-overview">
                   <div className="emp-salary-item">
                     <span className="emp-salary-label">Basic Salary</span>
@@ -429,10 +474,10 @@ const EmployeeProfile = () => {
               <div className="emp-form-grid">
                 <div className="emp-form-group">
                   <label className="emp-form-label">Email Address</label>
-                  <input 
-                    type="email" 
-                    value={user?.email || ""} 
-                    disabled 
+                  <input
+                    type="email"
+                    value={user?.email || ""}
+                    disabled
                     className="emp-form-input emp-disabled"
                   />
                 </div>
@@ -469,9 +514,9 @@ const EmployeeProfile = () => {
                   <label className="emp-form-label">Gender</label>
                   <div className="emp-radio-group">
                     <label className="emp-radio-option">
-                      <input 
-                        type="radio" 
-                        name="gender" 
+                      <input
+                        type="radio"
+                        name="gender"
                         value="male"
                         checked={selectedGender === 'male'}
                         onChange={(e) => setSelectedGender(e.target.value)}
@@ -479,9 +524,9 @@ const EmployeeProfile = () => {
                       <span>Male</span>
                     </label>
                     <label className="emp-radio-option">
-                      <input 
-                        type="radio" 
-                        name="gender" 
+                      <input
+                        type="radio"
+                        name="gender"
                         value="female"
                         checked={selectedGender === 'female'}
                         onChange={(e) => setSelectedGender(e.target.value)}
@@ -492,42 +537,42 @@ const EmployeeProfile = () => {
                 </div>
                 <div className="emp-form-group">
                   <label className="emp-form-label">Date of Birth</label>
-                  <input 
-                    type="date" 
-                    name="dob" 
+                  <input
+                    type="date"
+                    name="dob"
                     value={personalDetails.dob}
                     onChange={handlePersonalChange}
-                    className="emp-form-input" 
+                    className="emp-form-input"
                   />
                 </div>
                 <div className="emp-form-group">
                   <label className="emp-form-label">Phone Number</label>
-                  <input 
-                    type="tel" 
+                  <input
+                    type="tel"
                     name="phone"
                     value={personalDetails.phone}
                     onChange={handlePersonalChange}
-                    placeholder="Enter phone number" 
-                    className="emp-form-input" 
+                    placeholder="Enter phone number"
+                    className="emp-form-input"
                   />
                 </div>
                 <div className="emp-form-group">
                   <label className="emp-form-label">Joining Date</label>
-                  <input 
-                    type="date" 
+                  <input
+                    type="date"
                     name="joiningDate"
                     value={personalDetails.joiningDate}
                     onChange={handlePersonalChange}
-                    className="emp-form-input" 
+                    className="emp-form-input"
                   />
                 </div>
                 <div className="emp-form-group">
                   <label className="emp-form-label">Marital Status</label>
                   <div className="emp-radio-group">
                     <label className="emp-radio-option">
-                      <input 
-                        type="radio" 
-                        name="marital" 
+                      <input
+                        type="radio"
+                        name="marital"
                         value="single"
                         checked={selectedMaritalStatus === 'single'}
                         onChange={(e) => setSelectedMaritalStatus(e.target.value)}
@@ -535,9 +580,9 @@ const EmployeeProfile = () => {
                       <span>Single</span>
                     </label>
                     <label className="emp-radio-option">
-                      <input 
-                        type="radio" 
-                        name="marital" 
+                      <input
+                        type="radio"
+                        name="marital"
                         value="married"
                         checked={selectedMaritalStatus === 'married'}
                         onChange={(e) => setSelectedMaritalStatus(e.target.value)}
@@ -548,7 +593,7 @@ const EmployeeProfile = () => {
                 </div>
                 <div className="emp-form-group emp-full-width">
                   <label className="emp-form-label">Address</label>
-                  <textarea 
+                  <textarea
                     name="address"
                     value={personalDetails.address}
                     onChange={handlePersonalChange}
@@ -596,9 +641,9 @@ const EmployeeProfile = () => {
                 </div>
                 <div className="emp-form-group">
                   <label className="emp-form-label">Leave Type</label>
-                  <select 
-                    name="type" 
-                    value={leaveForm.type} 
+                  <select
+                    name="type"
+                    value={leaveForm.type}
                     onChange={handleChange}
                     className="emp-form-select"
                   >
@@ -620,9 +665,9 @@ const EmployeeProfile = () => {
                   />
                 </div>
               </div>
-              <button 
+              <button
                 className="emp-apply-btn"
-                onClick={handleApplyLeave} 
+                onClick={handleApplyLeave}
                 disabled={loading}
               >
                 {loading ? "Submitting..." : "Submit Leave Request"}
@@ -673,31 +718,31 @@ const EmployeeProfile = () => {
                 </h3>
                 <div className="emp-task-filters">
                   <FaFilter className="filter-icon" />
-                  <button 
+                  <button
                     className={`filter-btn ${taskFilter === 'all' ? 'active' : ''}`}
                     onClick={() => setTaskFilter('all')}
                   >
                     All Tasks
                   </button>
-                  <button 
+                  <button
                     className={`filter-btn ${taskFilter === 'pending' ? 'active' : ''}`}
                     onClick={() => setTaskFilter('pending')}
                   >
                     Pending
                   </button>
-                  <button 
+                  <button
                     className={`filter-btn ${taskFilter === 'active' ? 'active' : ''}`}
                     onClick={() => setTaskFilter('active')}
                   >
                     Active
                   </button>
-                  <button 
+                  <button
                     className={`filter-btn ${taskFilter === 'hold' ? 'active' : ''}`}
                     onClick={() => setTaskFilter('hold')}
                   >
                     On Hold
                   </button>
-                  <button 
+                  <button
                     className={`filter-btn ${taskFilter === 'completed' ? 'active' : ''}`}
                     onClick={() => setTaskFilter('completed')}
                   >
@@ -705,7 +750,7 @@ const EmployeeProfile = () => {
                   </button>
                 </div>
               </div>
-              
+
               {myTasksLoading ? (
                 <div className="emp-no-tasks"><p>Loading tasks...</p></div>
               ) : filteredTasks.length > 0 ? (
@@ -717,9 +762,9 @@ const EmployeeProfile = () => {
                           <h4 className="emp-task-title">{task.name}</h4>
                           <span className="emp-task-id">#{task.code}</span>
                         </div>
-                        <span 
+                        <span
                           className="emp-task-priority"
-                          style={{ 
+                          style={{
                             background: getPriorityColor(task.priority?.toUpperCase()) + '20',
                             color: getPriorityColor(task.priority?.toUpperCase()),
                             border: `1px solid ${getPriorityColor(task.priority?.toUpperCase())}40`
@@ -763,7 +808,7 @@ const EmployeeProfile = () => {
                         <div className="emp-status-buttons">
                           <button
                             className={`emp-status-btn ${mapStatusForDisplay(task.status) === 'not started' ? 'active' : ''}`}
-                            style={{ 
+                            style={{
                               background: mapStatusForDisplay(task.status) === 'not started' ? getStatusColor('not started') : 'transparent',
                               color: mapStatusForDisplay(task.status) === 'not started' ? 'white' : getStatusColor('not started'),
                               borderColor: getStatusColor('not started')
@@ -774,7 +819,7 @@ const EmployeeProfile = () => {
                           </button>
                           <button
                             className={`emp-status-btn ${mapStatusForDisplay(task.status) === 'in progress' ? 'active' : ''}`}
-                            style={{ 
+                            style={{
                               background: mapStatusForDisplay(task.status) === 'in progress' ? getStatusColor('in progress') : 'transparent',
                               color: mapStatusForDisplay(task.status) === 'in progress' ? 'white' : getStatusColor('in progress'),
                               borderColor: getStatusColor('in progress')
@@ -785,7 +830,7 @@ const EmployeeProfile = () => {
                           </button>
                           <button
                             className={`emp-status-btn ${mapStatusForDisplay(task.status) === 'on hold' ? 'active' : ''}`}
-                            style={{ 
+                            style={{
                               background: mapStatusForDisplay(task.status) === 'on hold' ? getStatusColor('on hold') : 'transparent',
                               color: mapStatusForDisplay(task.status) === 'on hold' ? 'white' : getStatusColor('on hold'),
                               borderColor: getStatusColor('on hold')
@@ -796,7 +841,7 @@ const EmployeeProfile = () => {
                           </button>
                           <button
                             className={`emp-status-btn ${mapStatusForDisplay(task.status) === 'completed' ? 'active' : ''}`}
-                            style={{ 
+                            style={{
                               background: mapStatusForDisplay(task.status) === 'completed' ? getStatusColor('completed') : 'transparent',
                               color: mapStatusForDisplay(task.status) === 'completed' ? 'white' : getStatusColor('completed'),
                               borderColor: getStatusColor('completed')
@@ -805,6 +850,43 @@ const EmployeeProfile = () => {
                           >
                             Completed
                           </button>
+                          {(() => {
+                            const assigned = Array.isArray(task.assignedTo) && task.assignedTo.some(p => p._id === user?._id);
+                            if (!assigned) return null;
+                            const assigneeCount = Array.isArray(task.assignedTo) ? task.assignedTo.length : 0;
+                            if (assigneeCount === 1) {
+                              // Show Delete (sole owner)
+                              return (
+                                <button
+                                  className="emp-status-btn emp-delete-inline"
+                                  title="Delete this task"
+                                  onClick={() => {
+                                    if (window.confirm('Delete this task? This cannot be undone.')) {
+                                      dispatch(deleteMyTask(task._id));
+                                    }
+                                  }}
+                                  style={{ borderColor: '#dc2626', color: '#dc2626' }}
+                                >
+                                  Delete
+                                </button>
+                              );
+                            }
+                            // Multiple assignees: allow leaving the task
+                            return (
+                              <button
+                                className="emp-status-btn emp-leave-inline"
+                                title="Leave this task (you will be unassigned)"
+                                onClick={() => {
+                                  if (window.confirm('Leave this task? You will be removed as an assignee.')) {
+                                    dispatch(leaveMyTask(task._id));
+                                  }
+                                }}
+                                style={{ borderColor: '#f59e0b', color: '#f59e0b' }}
+                              >
+                                Leave Task
+                              </button>
+                            );
+                          })()}
                         </div>
                       </div>
                     </div>

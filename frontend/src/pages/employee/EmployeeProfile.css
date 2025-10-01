@@ -552,6 +552,7 @@
   align-items: flex-start;
   margin-bottom: 15px;
   gap: 15px;
+  position: relative;
 }
 
 .emp-task-header-left {
@@ -584,6 +585,79 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+}
+
+/* Delete Button */
+.emp-task-delete-btn {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  background: #ffe5e5;
+  border: 1px solid #ffb3b3;
+  color: #c62828;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease;
+}
+
+.emp-task-delete-btn:hover {
+  background: #ffc7c7;
+  box-shadow: 0 2px 6px rgba(198,40,40,0.3);
+}
+
+.emp-task-delete-btn:active {
+  transform: scale(0.9);
+}
+
+.emp-task-delete-btn:disabled {
+  background: #f5f5f5;
+  border-color: #e5e7eb;
+  color: #9ca3af;
+  box-shadow: none;
+}
+
+.emp-task-delete-btn:disabled:hover {
+  background: #f5f5f5;
+  transform: none;
+}
+
+/* Inline delete button inside status row */
+.emp-delete-inline {
+  min-width: 90px;
+  border-width: 2px;
+}
+.emp-delete-inline:hover:not(:disabled) {
+  background: #dc2626;
+  color: #fff !important;
+  border-color: #dc2626;
+}
+
+.emp-leave-inline {
+  min-width: 110px;
+  border-width: 2px;
+}
+.emp-leave-inline:hover:not(:disabled) {
+  background: #f59e0b;
+  color: #fff !important;
+  border-color: #f59e0b;
+}
+
+@media (max-width: 600px) {
+  .emp-task-delete-btn {
+    top: 4px;
+    right: 4px;
+    width: 28px;
+    height: 28px;
+    font-size: 14px;
+  }
 }
 
 .emp-task-description {

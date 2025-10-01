@@ -175,10 +175,73 @@ export const employeeUpdateTaskStatus = async (req, res) => {
 
 export const deleteTask = async (req, res) => {
   try {
-    const task = await Task.findByIdAndDelete(req.params.id);
+    const task = await Task.findById(req.params.id).populate('project','_id code name');
     if (!task) return res.status(404).json({ success: false, message: 'Task not found' });
+    await task.deleteOne();
+    // Emit socket event so PM/others can remove from UI
+    try {
+      const io = req.app.get('io');
+      if (io) {
+        io.emit('taskDeleted', { taskId: req.params.id });
+        if (task.project?._id) io.to(`project:${task.project._id}`).emit('taskDeleted', { taskId: req.params.id });
+      }
+    } catch (e) { console.warn('Socket emit delete failed', e.message); }
     return res.json({ success: true, message: 'Task deleted' });
   } catch (error) {
     return res.status(500).json({ success: false, message: 'Error deleting task', error: error.message });
+  }
+};
+
+// Employee self-delete: only allowed if the employee is the sole assignee (avoid orphaning collaborator expectations)
+export const employeeDeleteMyTask = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const task = await Task.findById(id).populate('project','_id code name');
+    if (!task) return res.status(404).json({ success:false, message:'Task not found' });
+    const isAssignee = task.assignedTo.map(x=> x.toString()).includes(req.user.id);
+    if (!isAssignee) return res.status(403).json({ success:false, message:'Not authorized for this task' });
+    if (task.assignedTo.length > 1) {
+      return res.status(400).json({ success:false, message:'Cannot delete a task with multiple assignees' });
+    }
+    await task.deleteOne();
+    try {
+      const io = req.app.get('io');
+      if (io) {
+        io.emit('taskDeleted', { taskId: id });
+        if (task.project?._id) io.to(`project:${task.project._id}`).emit('taskDeleted', { taskId: id });
+      }
+    } catch (e) { console.warn('Socket emit delete failed', e.message); }
+    return res.json({ success:true, message:'Task deleted' });
+  } catch (error) {
+    return res.status(500).json({ success:false, message:'Error deleting task', error:error.message });
+  }
+};
+
+// Employee leave task (unassign self) when there are multiple assignees
+export const employeeLeaveTask = async (req, res) => {
+  try {
+    const { id } = req.params; // task id
+    const task = await Task.findById(id).populate('project','_id code name');
+    if (!task) return res.status(404).json({ success:false, message:'Task not found' });
+    const idx = task.assignedTo.findIndex(x => x.toString() === req.user.id);
+    if (idx === -1) return res.status(403).json({ success:false, message:'You are not an assignee of this task' });
+    if (task.assignedTo.length === 1) {
+      return res.status(400).json({ success:false, message:'Only you are assigned. Use delete instead.' });
+    }
+    task.assignedTo.splice(idx,1);
+    await task.save();
+    const populated = await Task.findById(task._id)
+      .populate('assignedTo','name employeeId role')
+      .populate('project','code name');
+    try {
+      const io = req.app.get('io');
+      if (io) {
+        io.emit('taskUpdated', { task: populated });
+        if (populated.project?._id) io.to(`project:${populated.project._id}`).emit('taskUpdated', { task: populated });
+      }
+    } catch (e) { console.warn('Socket emit leave failed', e.message); }
+    return res.json({ success:true, message:'Left task', task: populated });
+  } catch (error) {
+    return res.status(500).json({ success:false, message:'Error leaving task', error:error.message });
   }
 };
