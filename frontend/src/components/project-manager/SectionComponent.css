@@ -103,20 +103,6 @@
   min-height: calc(100vh - 130px);
 }
 
-/* Coming Soon Placeholder */
-.coming-soon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 400px;
-  background: white;
-  border-radius: 16px;
-  font-size: 24px;
-  font-weight: 600;
-  color: #6b7280;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-}
-
 /* ===== Responsive Enhancements ===== */
 
 /* Tablet: gently shrink */

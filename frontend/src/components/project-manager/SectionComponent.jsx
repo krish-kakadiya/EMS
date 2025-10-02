@@ -4,6 +4,7 @@ import TaskManagement from "../../pages/project-manager/TaskManagement.jsx";
 import "./SectionComponent.css";
 import Navbar from "../Navbar.jsx";
 import { FaTachometerAlt, FaProjectDiagram, FaTasks } from 'react-icons/fa';
+import MyProjectsPage from "../../pages/project-manager/MyProject.jsx";
 
 const SectionComponent = () => {
   const [activePage, setActivePage] = useState("dashboard");
@@ -49,7 +50,7 @@ const SectionComponent = () => {
       {/* Main Content */}
       <div className="content-area">
         {activePage === "dashboard" && <Dashboard />}
-        {activePage === "projects" && <div className="coming-soon">My Projects - Coming Soon</div>}
+        {activePage === "projects" && <MyProjectsPage />}
         {activePage === "task" && <TaskManagement />}
       </div>
     </div>

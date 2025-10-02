@@ -1,0 +1,791 @@
+import React, { useState, useEffect } from 'react';
+import { useSelector } from 'react-redux';
+import { formatDDMMYY } from '../../utils/dateFormat.js';
+import "./Dashboard.css";
+import ProjectChat from './ProjectChat';
+import { 
+  fetchProjects, 
+  createProject as apiCreateProject, 
+  fetchSimpleEmployees,
+  fetchTasks,
+  updateProjectTeam
+} from '../../axios/projectTaskApi';
+
+const MyProjectsPage = () => {
+  const { user: currentUser } = useSelector((state) => state.auth);
+  
+  const [projects, setProjects] = useState([]);
+  const [employees, setEmployees] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [tasks, setTasks] = useState([]);
+  const [error, setError] = useState(null);
+
+  const [showAddProject, setShowAddProject] = useState(false);
+  const [showTeamView, setShowTeamView] = useState(false);
+  const [showEditTeam, setShowEditTeam] = useState(false);
+  const [showChat, setShowChat] = useState(false);
+  const [chatProject, setChatProject] = useState(null);
+  const [selectedProject, setSelectedProject] = useState(null);
+  const [editTeamProject, setEditTeamProject] = useState(null);
+  const [editTeamSelected, setEditTeamSelected] = useState([]);
+  const [selectedEmployees, setSelectedEmployees] = useState([]);
+  const [activeFilter, setActiveFilter] = useState('All');
+  const [unreadMessages, setUnreadMessages] = useState({});
+
+  const [newProject, setNewProject] = useState({
+    name: '',
+    client: '',
+    startDate: '',
+    endDate: '',
+    description: '',
+    technologies: '',
+    githubLink: '',
+    projectType: 'Web Application'
+  });
+
+  const projectTypes = [
+    'Web Application',
+    'Website', 
+    'Mobile App',
+    'Desktop App',
+    'API/Backend',
+    'E-commerce',
+    'CMS',
+    'Dashboard',
+    'Landing Page',
+    'Other'
+  ];
+
+  const calculateDuration = (startDate, endDate) => {
+    if (!startDate || !endDate) return '';
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    const diffTime = Math.abs(end - start);
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return `${diffDays} days`;
+  };
+
+  const calculateProgress = (completedTasks, totalTasks) => {
+    if (totalTasks === 0) return 0;
+    return Math.round((completedTasks / totalTasks) * 100);
+  };
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        setLoading(true);
+        const [projRes, empRes, taskRes] = await Promise.all([
+          fetchProjects(),
+          fetchSimpleEmployees(),
+          fetchTasks()
+        ]);
+        setProjects(projRes.data.projects || []);
+        setEmployees(empRes.data.employees || []);
+        setTasks(taskRes.data.tasks || []);
+        
+        await loadUnreadMessageCounts(projRes.data.projects || []);
+      } catch (e) {
+        setError(e.response?.data?.message || 'Failed to load projects data');
+      } finally { setLoading(false); }
+    };
+    load();
+  }, []);
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setNewProject(prev => ({
+      ...prev,
+      [name]: value,
+      ...(name === 'startDate' || name === 'endDate' ? {
+        duration: calculateDuration(
+          name === 'startDate' ? value : prev.startDate,
+          name === 'endDate' ? value : prev.endDate
+        )
+      } : {})
+    }));
+  };
+
+  const handleEmployeeSelection = (employeeId) => {
+    setSelectedEmployees(prev => {
+      if (prev.includes(employeeId)) {
+        return prev.filter(id => id !== employeeId);
+      } else {
+        return [...prev, employeeId];
+      }
+    });
+  };
+
+  const handleAddProject = async (e) => {
+    e.preventDefault();
+    try {
+      setLoading(true);
+      const teamMemberObjectIds = selectedEmployees.map(eid => {
+        const found = employees.find(emp => emp.employeeId === eid || emp._id === eid);
+        return found?._id;
+      }).filter(Boolean);
+      await apiCreateProject({
+        name: newProject.name,
+        client: newProject.client,
+        description: newProject.description,
+        startDate: newProject.startDate || undefined,
+        endDate: newProject.endDate || undefined,
+        teamMembers: teamMemberObjectIds
+      });
+      const projRes = await fetchProjects();
+      setProjects(projRes.data.projects || []);
+      setNewProject({
+        name: '',
+        client: '',
+        startDate: '',
+        endDate: '',
+        description: '',
+        technologies: '',
+        githubLink: '',
+        projectType: 'Web Application'
+      });
+      setSelectedEmployees([]);
+      setShowAddProject(false);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to create project');
+    } finally { setLoading(false); }
+  };
+
+  const normalizeStatus = (s='') => {
+    const map = { 'pending':'Pending', 'in-progress':'In Progress', 'completed':'Completed', 'on-hold':'On Hold' };
+    return map[s] || s;
+  };
+
+  const getProjectTaskSummary = (project) => {
+    const pid = project._id || project.id;
+    const projectTasks = tasks.filter(t => {
+      if (!t.project) return false;
+      const tp = t.project._id || t.project.id || t.project;
+      return tp === pid;
+    });
+    const total = projectTasks.length;
+    const completed = projectTasks.filter(t => t.status === 'completed').length;
+    const inProgress = projectTasks.filter(t => t.status === 'in-progress').length;
+    const notStarted = projectTasks.filter(t => t.status === 'not-started').length;
+    const onHold = projectTasks.filter(t => t.status === 'on-hold').length;
+    return { total, completed, inProgress, notStarted, onHold, progress: calculateProgress(completed, total) };
+  };
+
+  const getFilteredProjects = () => {
+    if (activeFilter === 'All') return projects;
+    if (activeFilter === 'Active') return projects.filter(p => normalizeStatus(p.status) === 'In Progress');
+    if (activeFilter === 'Pending') return projects.filter(p => normalizeStatus(p.status) === 'Pending');
+    if (activeFilter === 'Completed') return projects.filter(p => normalizeStatus(p.status) === 'Completed');
+    return projects;
+  };
+
+  const getEmployeeById = (employeeId) => {
+    return employees.find(emp => emp.employeeId === employeeId || emp._id === employeeId);
+  };
+
+  const getDisplayDepartment = (employee) => {
+    if (!employee) return 'Department not set';
+    const dept = employee.department?.trim();
+    if (dept && dept.toLowerCase() !== 'employee') return dept;
+    const designation = employee.designation?.trim();
+    if (designation) return designation;
+    const role = employee.role?.trim();
+    if (role && role.toLowerCase() !== 'employee') return role;
+    return 'Department not set';
+  };
+
+  const handleTeamView = (project) => {
+    setSelectedProject(project);
+    setShowTeamView(true);
+  };
+
+  const loadUnreadMessageCounts = async (projectsList = projects) => {
+    if (!currentUser || !projectsList || !Array.isArray(projectsList)) {
+      console.warn('loadUnreadMessageCounts: Missing currentUser or projectsList', { currentUser, projectsList });
+      return;
+    }
+    
+    const counts = {};
+    try {
+      await Promise.all(
+        projectsList.map(async (project) => {
+          try {
+            const response = await fetch(
+              `http://localhost:3000/api/chat/unread/${project._id}/${currentUser._id || currentUser.employeeId}`
+            );
+            if (response.ok) {
+              const data = await response.json();
+              if (data.success) {
+                counts[project._id] = data.count;
+              }
+            }
+          } catch (err) {
+            console.error(`Failed to load unread count for project ${project._id}:`, err);
+          }
+        })
+      );
+      setUnreadMessages(counts);
+    } catch (error) {
+      console.error('Error loading unread message counts:', error);
+    }
+  };
+
+  const handleChatOpen = (project) => {
+    setError(null);
+    
+    if (!currentUser) {
+      setError('User not authenticated. Please refresh the page.');
+      setTimeout(() => setError(null), 5000);
+      return;
+    }
+
+    if (!project) {
+      setError('Invalid project selected.');
+      setTimeout(() => setError(null), 5000);
+      return;
+    }
+
+    const hasAccess = 
+      currentUser.role === 'pm' || 
+      currentUser.role === 'project-manager' ||
+      currentUser.role === 'admin' ||
+      currentUser.role === 'hr' ||
+      project.teamMembers?.some(member => {
+        const memberId = typeof member === 'string' ? member : (member._id || member.employeeId);
+        return memberId === currentUser._id || memberId === currentUser.employeeId;
+      });
+
+    if (!hasAccess) {
+      setError('You are not authorized to access this project chat.');
+      setTimeout(() => setError(null), 5000);
+      return;
+    }
+
+    const chatProject = {
+      ...project,
+      teamMembers: project.teamMembers || []
+    };
+
+    setChatProject(chatProject);
+    setShowChat(true);
+    
+    setUnreadMessages(prev => ({
+      ...prev,
+      [project._id]: 0
+    }));
+  };
+
+  const getActiveTaskCount = (employee, project) => {
+    if (!employee || !project) return 0;
+    const pid = project._id || project.id;
+    return tasks.filter(t => {
+      if (!t.project || t.status !== 'in-progress') return false;
+      const tp = t.project._id || t.project.id || t.project;
+      if (tp !== pid) return false;
+      return (t.assignedTo || []).some(a => {
+        if (typeof a === 'string') return a === employee._id;
+        return (a._id === employee._id);
+      });
+    }).length;
+  };
+
+  const openEditTeam = (project) => {
+    setEditTeamProject(project);
+    const existing = (project.teamMembers || []).map(m => {
+      if (typeof m === 'string') {
+        const emp = employees.find(e => e._id === m || e.employeeId === m);
+        return emp?.employeeId || emp?._id || m;
+      }
+      return m.employeeId || m._id;
+    }).filter(Boolean);
+    setEditTeamSelected(existing);
+    setShowEditTeam(true);
+  };
+
+  const toggleEditTeamMember = (employeeId) => {
+    setEditTeamSelected(prev => prev.includes(employeeId)
+      ? prev.filter(id => id !== employeeId)
+      : [...prev, employeeId]);
+  };
+
+  const saveEditTeam = async () => {
+    if (!editTeamProject) return;
+    try {
+      setLoading(true);
+      const memberObjectIds = editTeamSelected.map(eid => {
+        const found = employees.find(emp => emp.employeeId === eid || emp._id === eid);
+        return found?._id;
+      }).filter(Boolean);
+      await updateProjectTeam(editTeamProject._id, memberObjectIds);
+      const projRes = await fetchProjects();
+      setProjects(projRes.data.projects || []);
+      const refreshed = projRes.data.projects.find(p => p._id === editTeamProject._id);
+      if (refreshed) {
+        setEditTeamProject(refreshed);
+        if (selectedProject && selectedProject._id === refreshed._id) setSelectedProject(refreshed);
+      }
+      setShowEditTeam(false);
+    } catch (e) {
+      setError(e.response?.data?.message || 'Failed to update team');
+    } finally { setLoading(false); }
+  };
+
+  return (
+    <div className="dashboard">
+      <div className="dashboard-header">
+        <div className="header-content">
+          <h2 className="header-title">My Projects</h2>
+          <p className="header-subtitle">Manage and track all your projects</p>
+        </div>
+        <div style={{ display: 'flex', gap: '12px' }}>
+          <button 
+            className="add-project-btn"
+            onClick={() => setShowAddProject(true)}
+            disabled={loading}
+          >
+            <span className="btn-text">{loading ? 'Loading...' : 'Add New Project'}</span>
+            <div className="btn-shine"></div>
+          </button>
+        </div>
+      </div>
+
+      {error && (
+        <div className="error-banner">
+          <span>{error}</span>
+          <button 
+            className="error-close-btn" 
+            onClick={() => setError(null)}
+            title="Close error message"
+          >
+            ×
+          </button>
+        </div>
+      )}
+
+      <div className="projects-container">
+        <div className="projects-header">
+          <h3 className="projects-title">All Projects ({getFilteredProjects().length})</h3>
+          <div className="filter-tabs">
+            {['All', 'Active', 'Pending', 'Completed'].map(filter => (
+              <button 
+                key={filter}
+                className={`filter-tab ${activeFilter === filter ? 'active' : ''}`}
+                onClick={() => setActiveFilter(filter)}
+              >
+                {filter}
+              </button>
+            ))}
+          </div>
+        </div>
+        
+        <div className="projects-grid">
+          {getFilteredProjects().map((project) => {
+            const projectIdDisplay = project.code || project._id || '—';
+            const teamMembersArr = project.teamMembers || [];
+            const summary = getProjectTaskSummary(project);
+            return (
+            <div key={project._id || project.code} className="project-card">
+              <div className="project-card-header">
+                <div className="project-title">
+                  <div>
+                    <h4>{project.name}</h4>
+                    {project.projectType && <span className="project-type">{project.projectType}</span>}
+                  </div>
+                </div>
+                <span className={`status-badge ${(normalizeStatus(project.status)).toLowerCase().replace(' ', '-')}`}>
+                  {normalizeStatus(project.status)}
+                </span>
+              </div>
+              
+              <div className="project-meta">
+                <div className="meta-item">
+                  <span className="meta-label">Project ID</span>
+                  <span className="meta-value">{projectIdDisplay}</span>
+                </div>
+                <div className="meta-item">
+                  <span className="meta-label">Client</span>
+                  <span className="meta-value">{project.client}</span>
+                </div>
+              </div>
+              
+              <div className="project-progress">
+                <div className="progress-header">
+                  <span>Progress</span>
+                  <span className="progress-percentage">{summary.progress}%</span>
+                </div>
+                <div className="progress-bar">
+                  <div 
+                    className="progress-fill" 
+                    style={{ width: `${summary.progress}%` }}
+                  ></div>
+                </div>
+                {summary.total > 0 && (
+                  <div className="progress-breakdown">
+                    <span className="pb-item">Pending: {summary.notStarted}</span>
+                    <span className="pb-item">Active: {summary.inProgress}</span>
+                    <span className="pb-item">Done: {summary.completed}</span>
+                  </div>
+                )}
+              </div>
+              
+              <div className="project-details">
+                <p className="project-description">{project.description}</p>
+                
+                <div className="project-info-grid">
+                  <div className="info-item">
+                    <span className="info-label">Duration</span>
+                    <span className="info-value">{calculateDuration(project.startDate, project.endDate) || '—'}</span>
+                  </div>
+                  <div className="info-item">
+                    <span className="info-label">Team Size</span>
+                    <span className="info-value">{teamMembersArr.length} members</span>
+                  </div>
+                  <div className="info-item">
+                    <span className="info-label">Start Date</span>
+                    <span className="info-value">{formatDDMMYY(project.startDate)}</span>
+                  </div>
+                  <div className="info-item">
+                    <span className="info-label">End Date</span>
+                    <span className="info-value">{formatDDMMYY(project.endDate)}</span>
+                  </div>
+                </div>
+                
+                {project.technologies && Array.isArray(project.technologies) && project.technologies.length > 0 && (
+                  <div className="tech-stack">
+                    <span className="tech-label">Technologies:</span>
+                    <div className="tech-tags">
+                      {project.technologies.map((tech, index) => (
+                        <span key={index} className="tech-tag">{tech}</span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+              
+              <div className="project-actions">
+                <div className="action-buttons-row">
+                  <button className="action-btn secondary" onClick={() => handleTeamView(project)}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                      <circle cx="9" cy="7" r="4"></circle>
+                      <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                      <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                    </svg>
+                    Team
+                  </button>
+                  <button className="action-btn secondary" onClick={() => openEditTeam(project)}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                    </svg>
+                    Edit
+                  </button>
+                  {project.githubLink && (
+                    <a 
+                      href={project.githubLink} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="action-btn secondary"
+                    >
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path>
+                      </svg>
+                      Repo
+                    </a>
+                  )}
+                </div>
+                <button className="action-btn chat-btn" onClick={() => handleChatOpen(project)}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                  </svg>
+                  Open Project Chat
+                  {unreadMessages[project._id] > 0 && (
+                    <span className="unread-badge">{unreadMessages[project._id]}</span>
+                  )}
+                </button>
+              </div>
+            </div>
+          );})}
+        </div>
+      </div>
+
+      {showAddProject && (
+        <div className="modal-overlay">
+          <div className="modal">
+            <div className="modal-header">
+              <h3>Create New Project</h3>
+              <button 
+                className="close-btn"
+                onClick={() => setShowAddProject(false)}
+              >
+                ×
+              </button>
+            </div>
+            
+            <div className="project-form">
+              <div className="form-section">
+                <h4>Project Information</h4>
+                
+                <div className="form-group">
+                  <label>Project Name *</label>
+                  <input
+                    type="text"
+                    name="name"
+                    value={newProject.name}
+                    onChange={handleInputChange}
+                    placeholder="Enter project name"
+                    required
+                  />
+                </div>
+                
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>Client Name *</label>
+                    <input
+                      type="text"
+                      name="client"
+                      value={newProject.client}
+                      onChange={handleInputChange}
+                      placeholder="Enter client name"
+                      required
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Project Type *</label>
+                    <select
+                      name="projectType"
+                      value={newProject.projectType}
+                      onChange={handleInputChange}
+                      required
+                    >
+                      {projectTypes.map((type) => (
+                        <option key={type} value={type}>{type}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="form-section">
+                <h4>Timeline</h4>
+                
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>Start Date *</label>
+                    <input
+                      type="date"
+                      name="startDate"
+                      value={newProject.startDate}
+                      onChange={handleInputChange}
+                      required
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>End Date *</label>
+                    <input
+                      type="date"
+                      name="endDate"
+                      value={newProject.endDate}
+                      min={newProject.startDate || undefined}
+                      onChange={handleInputChange}
+                      required
+                    />
+                  </div>
+                </div>
+                
+                <div className="form-group">
+                  <label>Duration (Auto Generated)</label>
+                  <input
+                    type="text"
+                    value={newProject.duration || 'Select dates to calculate'}
+                    disabled
+                    className="duration-display"
+                  />
+                </div>
+              </div>
+              
+              <div className="form-section">
+                <h4>Project Details</h4>
+                
+                <div className="form-group">
+                  <label>Description *</label>
+                  <textarea
+                    name="description"
+                    value={newProject.description}
+                    onChange={handleInputChange}
+                    rows="3"
+                    placeholder="Describe the project objectives and scope"
+                    required
+                  ></textarea>
+                </div>
+                
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>Technologies/Tools</label>
+                    <input
+                      type="text"
+                      name="technologies"
+                      value={newProject.technologies}
+                      onChange={handleInputChange}
+                      placeholder="e.g., React, Node.js, MongoDB"
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>GitHub Repository</label>
+                    <input
+                      type="url"
+                      name="githubLink"
+                      value={newProject.githubLink}
+                      onChange={handleInputChange}
+                      placeholder="https://github.com/..."
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="form-section">
+                <h4>Team Members</h4>
+                <p className="section-description">Select team members for this project</p>
+                
+                <div className="employees-grid">
+                    {employees.map((employee) => (
+                      <div
+                        key={employee._id}
+                        className={`employee-card ${selectedEmployees.includes(employee.employeeId) ? 'selected' : ''}`}
+                        onClick={() => handleEmployeeSelection(employee.employeeId)}
+                      >
+                        <div className="employee-avatar">
+                          <img src={employee.photo || 'https://via.placeholder.com/80'} alt={employee.name} />
+                          <div className="avatar-status"></div>
+                        </div>
+                        <div className="employee-info">
+                          <h5 className="employee-name">{employee.name}</h5>
+                          <span className="employee-department">{getDisplayDepartment(employee)}</span>
+                          <span className="employee-email">{employee.email}</span>
+                        </div>
+                        {selectedEmployees.includes(employee.employeeId) && (
+                          <div className="selection-check"><span>✓</span></div>
+                        )}
+                      </div>
+                    ))}
+                </div>
+              </div>
+              
+              <div className="modal-actions">
+                <button 
+                  type="button" 
+                  className="btn-cancel"
+                  onClick={() => setShowAddProject(false)}
+                >
+                  Cancel
+                </button>
+                <button type="button" className="btn-submit" onClick={handleAddProject} disabled={loading}>
+                  {loading ? 'Saving...' : 'Create Project'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showTeamView && selectedProject && (
+        <div className="modal-overlay">
+          <div className="modal">
+            <div className="modal-header">
+              <h3>Team Members - {selectedProject.name}</h3>
+              <button 
+                className="close-btn"
+                onClick={() => setShowTeamView(false)}
+              >
+                ×
+              </button>
+            </div>
+            
+            <div className="team-container">
+              {(selectedProject.teamMembers || []).map((member) => {
+                const employee = typeof member === 'string' || typeof member === 'number'
+                  ? getEmployeeById(member)
+                  : member;
+                if (!employee) return null;
+                return (
+                  <div key={employee._id || employee.employeeId} className="team-member-card">
+                    <div className="team-member-avatar">
+                      <img src={employee.photo || 'https://via.placeholder.com/60'} alt={employee.name} />
+                    </div>
+                    <div className="member-info">
+                      <h4>{employee.name}</h4>
+                      <p className="member-department">{getDisplayDepartment(employee)}</p>
+                      <p className="member-email">{employee.email}</p>
+                    </div>
+                    <div className="member-stats">
+                      <span>Active Tasks: {getActiveTaskCount(employee, selectedProject)}</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showEditTeam && editTeamProject && (
+        <div className="modal-overlay">
+          <div className="modal">
+            <div className="modal-header">
+              <h3>Edit Team - {editTeamProject.name}</h3>
+              <button className="close-btn" onClick={() => setShowEditTeam(false)}>×</button>
+            </div>
+            <div className="project-form">
+              <div className="form-section">
+                <h4>Select / Deselect Members</h4>
+                <p className="section-description">Click to toggle membership. Save to apply changes.</p>
+                <div className="employees-grid">
+                  {employees.map(emp => {
+                    const selected = editTeamSelected.includes(emp.employeeId);
+                    return (
+                      <div key={emp._id}
+                        className={`employee-card ${selected ? 'selected' : ''}`}
+                        onClick={() => toggleEditTeamMember(emp.employeeId)}>
+                        <div className="employee-avatar">
+                          <img src={emp.photo || 'https://via.placeholder.com/80'} alt={emp.name} />
+                          <div className="avatar-status"></div>
+                        </div>
+                        <div className="employee-info">
+                          <h5 className="employee-name">{emp.name}</h5>
+                          <span className="employee-department">{getDisplayDepartment(emp)}</span>
+                          <span className="employee-email">{emp.email}</span>
+                        </div>
+                        {selected && <div className="selection-check"><span>✓</span></div>}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+              <div className="modal-actions">
+                <button type="button" className="btn-cancel" onClick={() => setShowEditTeam(false)}>Cancel</button>
+                <button type="button" className="btn-submit" disabled={loading} onClick={saveEditTeam}>
+                  {loading ? 'Saving...' : 'Save Team'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showChat && chatProject && currentUser && (
+        <ProjectChat 
+          project={chatProject}
+          currentUser={currentUser}
+          onClose={() => {
+            setShowChat(false);
+            setChatProject(null);
+          }}
+          onMessagesRead={(projectId) => {
+            loadUnreadMessageCounts();
+          }}
+        />
+      )}
+    </div>
+  );
+};
+
+export default MyProjectsPage;
