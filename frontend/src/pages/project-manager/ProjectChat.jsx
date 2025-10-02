@@ -5,7 +5,80 @@ import "./ProjectChat.css";
 
 const SOCKET_SERVER_URL = 'http://localhost:3000';
 
-const ProjectChat = ({ project, currentUser, onClose }) => {
+// Generate local placeholder image using SVG data URL
+const generatePlaceholderImage = (initials, size = 40, bgColor = '#4A90E2', textColor = '#FFFFFF') => {
+  const svg = `
+    <svg width="${size}" height="${size}" xmlns="http://www.w3.org/2000/svg">
+      <rect width="100%" height="100%" fill="${bgColor}" rx="50%"/>
+      <text x="50%" y="50%" dy="0.35em" text-anchor="middle" font-family="Arial, sans-serif" 
+            font-size="${size * 0.4}" font-weight="bold" fill="${textColor}">
+        ${initials.toUpperCase()}
+      </text>
+    </svg>
+  `;
+  return `data:image/svg+xml;base64,${btoa(svg)}`;
+};
+
+// Download file function
+const downloadFile = async (fileUrl, fileName, event = null) => {
+  try {
+    // Show loading indicator
+    const originalText = event?.target?.textContent;
+    if (event?.target) {
+      event.target.textContent = '⏳ Downloading...';
+      event.target.disabled = true;
+    }
+
+    const response = await fetch(fileUrl, {
+      mode: 'cors',
+      credentials: 'omit'
+    });
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = fileName || 'download';
+    link.style.display = 'none';
+    
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+    
+    // Show success feedback
+    if (event?.target) {
+      event.target.textContent = '✅ Downloaded';
+      setTimeout(() => {
+        event.target.textContent = originalText || '📥 Download';
+        event.target.disabled = false;
+      }, 2000);
+    }
+    
+  } catch (error) {
+    console.error('Error downloading file:', error);
+    
+    // Reset button state
+    if (event?.target) {
+      event.target.textContent = '❌ Failed';
+      setTimeout(() => {
+        event.target.textContent = originalText || '📥 Download';
+        event.target.disabled = false;
+      }, 2000);
+    }
+    
+    // Fallback: open in new tab
+    setTimeout(() => {
+      window.open(fileUrl, '_blank');
+    }, 1000);
+  }
+};
+
+const ProjectChat = ({ project, currentUser, onClose, onMessagesRead }) => {
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
   const [showTeamMembers, setShowTeamMembers] = useState(false);
@@ -15,6 +88,11 @@ const ProjectChat = ({ project, currentUser, onClose }) => {
   const [isConnected, setIsConnected] = useState(false);
   const [activeUsers, setActiveUsers] = useState([]);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [error, setError] = useState(null);
+  const [success, setSuccess] = useState(null);
+  const [isMarkingRead, setIsMarkingRead] = useState(false);
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
+  const [isClearingHistory, setIsClearingHistory] = useState(false);
   
   const messagesEndRef = useRef(null);
   const chatContainerRef = useRef(null);
@@ -29,18 +107,55 @@ const ProjectChat = ({ project, currentUser, onClose }) => {
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages]);
+    // Mark messages as read when new messages arrive, but debounce to prevent excessive calls
+    if (messages.length > 0) {
+      const timeoutId = setTimeout(() => {
+        markAllMessagesAsRead();
+      }, 500); // Wait 500ms before marking as read
+      
+      return () => clearTimeout(timeoutId);
+    }
+  }, [messages.length]); // Only depend on message count, not entire messages array
 
   // Initialize Socket.IO connection
   useEffect(() => {
-    if (!project || !currentUser) return;
+    if (!project || !currentUser) {
+      console.error('ProjectChat: Missing project or currentUser data');
+      return;
+    }
+
+    // Validate user has required fields
+    const userId = currentUser._id || currentUser.employeeId;
+    const userName = currentUser.name;
+    
+    if (!userId || !userName) {
+      console.error('ProjectChat: User missing required fields (id or name)');
+      return;
+    }
+
+    // Prevent multiple socket connections
+    if (socketRef.current) {
+      if (socketRef.current.connected) {
+        console.log('Socket already connected, skipping initialization');
+        return;
+      } else {
+        // Clean up existing disconnected socket
+        socketRef.current.removeAllListeners();
+        socketRef.current.disconnect();
+        socketRef.current = null;
+      }
+    }
 
     // Create socket connection
     socketRef.current = io(SOCKET_SERVER_URL, {
-      transports: ['websocket'],
+      transports: ['websocket', 'polling'], // Allow fallback to polling
       reconnection: true,
       reconnectionDelay: 1000,
-      reconnectionAttempts: 5
+      reconnectionAttempts: 10, // More reconnection attempts
+      timeout: 60000, // Increased timeout for file uploads
+      forceNew: false, // Reuse existing connection
+      upgrade: true,
+      rememberUpgrade: true
     });
 
     const socket = socketRef.current;
@@ -53,20 +168,49 @@ const ProjectChat = ({ project, currentUser, onClose }) => {
       // Join project room
       socket.emit('join_project', {
         projectId: project._id,
-        userId: currentUser._id || currentUser.employeeId,
-        userName: currentUser.name,
-        userPhoto: currentUser.photo
+        userId: userId,
+        userName: userName,
+        userPhoto: currentUser.photo || 
+                  (currentUser.profile && currentUser.profile.profilePicture) ||
+                  generatePlaceholderImage(userName ? userName.charAt(0) : 'U')
       });
     });
 
-    socket.on('disconnect', () => {
-      console.log('Disconnected from socket server');
+    socket.on('disconnect', (reason) => {
+      console.log('Disconnected from socket server:', reason);
       setIsConnected(false);
+      
+      // Auto-reconnect if disconnected unexpectedly
+      if (reason === 'io server disconnect') {
+        // Server disconnected us, manually reconnect
+        setTimeout(() => {
+          socket.connect();
+        }, 1000);
+      }
     });
 
     socket.on('connect_error', (error) => {
       console.error('Connection error:', error);
       setIsConnected(false);
+    });
+
+    socket.on('reconnect', (attemptNumber) => {
+      console.log('Reconnected to socket server after', attemptNumber, 'attempts');
+      setIsConnected(true);
+      
+      // Rejoin project room after reconnection
+      socket.emit('join_project', {
+        projectId: project._id,
+        userId: userId,
+        userName: userName,
+        userPhoto: currentUser.photo || 
+                  (currentUser.profile && currentUser.profile.profilePicture) ||
+                  generatePlaceholderImage(userName ? userName.charAt(0) : 'U')
+      });
+    });
+
+    socket.on('reconnect_error', (error) => {
+      console.error('Reconnection error:', error);
     });
 
     // Message events
@@ -78,10 +222,13 @@ const ProjectChat = ({ project, currentUser, onClose }) => {
         senderPhoto: msg.senderPhoto,
         message: msg.message,
         timestamp: new Date(msg.timestamp),
-        isCurrentUser: msg.senderId === (currentUser._id || currentUser.employeeId),
+        isCurrentUser: msg.senderId === userId,
         attachment: msg.attachment
       }));
       setMessages(formattedMessages);
+      
+      // Mark all messages as read when chat is opened
+      markAllMessagesAsRead();
     });
 
     socket.on('receive_message', (msg) => {
@@ -92,7 +239,7 @@ const ProjectChat = ({ project, currentUser, onClose }) => {
         senderPhoto: msg.senderPhoto,
         message: msg.message,
         timestamp: new Date(msg.timestamp),
-        isCurrentUser: msg.senderId === (currentUser._id || currentUser.employeeId),
+        isCurrentUser: msg.senderId === userId,
         attachment: msg.attachment
       };
       setMessages(prev => [...prev, formattedMessage]);
@@ -124,17 +271,41 @@ const ProjectChat = ({ project, currentUser, onClose }) => {
 
     socket.on('error', (error) => {
       console.error('Socket error:', error);
-      alert(error.message || 'An error occurred');
+      const errorMessage = error.details ? 
+        `${error.message}: ${error.details}` : 
+        (error.message || 'A connection error occurred');
+      setError(errorMessage);
+      setTimeout(() => setError(null), 10000); // Show error longer for debugging
     });
+
+    // Handle messages marked as read event
+    socket.on('messages_marked_read', (data) => {
+      const { projectId, readByUserId } = data;
+      console.log(`Messages marked as read in project ${projectId} by user ${readByUserId}`);
+      
+      // If we have an onMessagesRead callback, call it to update parent component
+      if (typeof onMessagesRead === 'function') {
+        onMessagesRead(projectId);
+      }
+    });
+
+    // Note: Removed chat_history_cleared event handler since clearing is now user-specific
 
     // Cleanup on unmount
     return () => {
       if (socket) {
+        console.log('Cleaning up socket connection');
+        socket.off('receive_message');
+        socket.off('typing');
+        socket.off('stop_typing');
+        socket.off('error');
+        socket.off('messages_marked_read');
         socket.emit('leave_project', { projectId: project._id });
         socket.disconnect();
+        socketRef.current = null;
       }
     };
-  }, [project, currentUser]);
+  }, [project._id, currentUser._id]); // Only depend on IDs, not entire objects
 
   // Handle typing indicator
   const handleTyping = () => {
@@ -163,6 +334,40 @@ const ProjectChat = ({ project, currentUser, onClose }) => {
     }, 2000);
   };
 
+  // Clear chat history function (user-specific)
+  const handleClearHistory = async () => {
+    if (!project?._id || !currentUser) return;
+    
+    setIsClearingHistory(true);
+    try {
+      const response = await axios.delete(
+        `${SOCKET_SERVER_URL}/api/chat/clear-history/${project._id}`,
+        {
+          data: {
+            userId: currentUser._id || currentUser.employeeId,
+            userRole: currentUser.role || 'employee'
+          }
+        }
+      );
+
+      if (response.data.success) {
+        // Clear local messages immediately for this user only
+        setMessages([]);
+        setSuccess('Chat history cleared for you. Other team members can still see their messages.');
+        setTimeout(() => setSuccess(null), 5000);
+      } else {
+        throw new Error(response.data.error || 'Failed to clear history');
+      }
+    } catch (error) {
+      console.error('Error clearing chat history:', error);
+      setError(error.response?.data?.error || 'Failed to clear chat history');
+      setTimeout(() => setError(null), 5000);
+    } finally {
+      setIsClearingHistory(false);
+      setShowClearConfirm(false);
+    }
+  };
+
   const handleSendMessage = async (e) => {
     e.preventDefault();
     if ((!newMessage.trim() && !selectedFile) || !socketRef.current) return;
@@ -172,6 +377,16 @@ const ProjectChat = ({ project, currentUser, onClose }) => {
 
       // Upload file if selected
       if (selectedFile) {
+        setError(null); // Clear any previous errors
+        
+        // Check socket connection before file upload
+        if (!socketRef.current.connected) {
+          console.log('Socket disconnected, attempting to reconnect...');
+          socketRef.current.connect();
+          // Wait a bit for reconnection
+          await new Promise(resolve => setTimeout(resolve, 2000));
+        }
+
         const formData = new FormData();
         formData.append('file', selectedFile);
 
@@ -180,6 +395,7 @@ const ProjectChat = ({ project, currentUser, onClose }) => {
           formData,
           {
             headers: { 'Content-Type': 'multipart/form-data' },
+            timeout: 300000, // 5 minutes timeout for large files
             onUploadProgress: (progressEvent) => {
               const progress = Math.round(
                 (progressEvent.loaded * 100) / progressEvent.total
@@ -189,16 +405,53 @@ const ProjectChat = ({ project, currentUser, onClose }) => {
           }
         );
 
-        attachmentData = uploadResponse.data.file;
+        if (uploadResponse.data.success) {
+          attachmentData = uploadResponse.data.file;
+          setSuccess('File uploaded successfully to cloud storage!');
+          setTimeout(() => setSuccess(null), 3000);
+        } else {
+          throw new Error(uploadResponse.data.error || 'Upload failed');
+        }
         setUploadProgress(0);
+      }
+
+      // Extract user info
+      const userId = currentUser._id || currentUser.employeeId;
+      const userName = currentUser.name;
+      // Try multiple sources for profile photo
+      const userPhoto = currentUser.photo || 
+                       (currentUser.profile && currentUser.profile.profilePicture) ||
+                       generatePlaceholderImage(userName ? userName.charAt(0) : 'U');
+
+      // Ensure socket is connected before sending message
+      if (!socketRef.current.connected) {
+        console.log('Socket disconnected before sending message, reconnecting...');
+        socketRef.current.connect();
+        
+        // Wait for reconnection with timeout
+        await new Promise((resolve, reject) => {
+          const timeout = setTimeout(() => reject(new Error('Socket reconnection timeout')), 10000);
+          
+          socketRef.current.once('connect', () => {
+            clearTimeout(timeout);
+            // Rejoin project room
+            socketRef.current.emit('join_project', {
+              projectId: project._id,
+              userId: userId,
+              userName: userName,
+              userPhoto: userPhoto
+            });
+            resolve();
+          });
+        });
       }
 
       // Send message via socket
       socketRef.current.emit('send_message', {
         projectId: project._id,
-        senderId: currentUser._id || currentUser.employeeId,
-        senderName: currentUser.name,
-        senderPhoto: currentUser.photo || 'https://via.placeholder.com/40',
+        senderId: userId,
+        senderName: userName,
+        senderPhoto: userPhoto,
         message: newMessage.trim(),
         attachment: attachmentData
       });
@@ -210,21 +463,23 @@ const ProjectChat = ({ project, currentUser, onClose }) => {
       // Stop typing indicator
       socketRef.current.emit('stop_typing', {
         projectId: project._id,
-        userName: currentUser.name
+        userName: userName
       });
       setIsTyping(false);
     } catch (error) {
       console.error('Error sending message:', error);
-      alert('Failed to send message. Please try again.');
+      setError('Failed to send message. Please try again.');
+      setTimeout(() => setError(null), 5000);
     }
   };
 
   const handleFileSelect = (e) => {
     const file = e.target.files[0];
     if (file) {
-      // Check file size (max 10MB)
-      if (file.size > 10 * 1024 * 1024) {
-        alert('File size should not exceed 10MB');
+      // Check file size (max 100MB for Cloudinary)
+      if (file.size > 100 * 1024 * 1024) {
+        setError('File size should not exceed 100MB');
+        setTimeout(() => setError(null), 5000);
         return;
       }
       setSelectedFile(file);
@@ -250,10 +505,13 @@ const ProjectChat = ({ project, currentUser, onClose }) => {
   const getFileIcon = (fileType) => {
     if (fileType.startsWith('image/')) return '🖼️';
     if (fileType.startsWith('video/')) return '🎥';
+    if (fileType.startsWith('audio/')) return '🎵';
     if (fileType.includes('pdf')) return '📄';
     if (fileType.includes('word') || fileType.includes('document')) return '📝';
     if (fileType.includes('sheet') || fileType.includes('excel')) return '📊';
-    if (fileType.includes('zip') || fileType.includes('rar')) return '🗜️';
+    if (fileType.includes('presentation') || fileType.includes('powerpoint')) return '📊';
+    if (fileType.includes('text') || fileType.includes('txt')) return '📃';
+    if (fileType.includes('zip') || fileType.includes('rar') || fileType.includes('7z')) return '🗜️';
     return '📎';
   };
 
@@ -270,6 +528,45 @@ const ProjectChat = ({ project, currentUser, onClose }) => {
     if (diffHours < 24) return `${diffHours}h ago`;
     
     return date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
+  };
+
+  // Mark all messages as read
+  const markAllMessagesAsRead = async () => {
+    if (!socketRef.current || !project || !currentUser || isMarkingRead) return;
+    
+    setIsMarkingRead(true);
+    try {
+      const userId = currentUser._id || currentUser.employeeId;
+      
+      // Call API to mark messages as read
+      const response = await fetch(`${SOCKET_SERVER_URL}/api/chat/mark-read`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          projectId: project._id,
+          userId: userId
+        })
+      });
+
+      if (response.ok) {
+        // Emit socket event to notify other users that messages have been read
+        socketRef.current.emit('messages_read', {
+          projectId: project._id,
+          userId: userId
+        });
+        
+        // Call callback if provided
+        if (typeof onMessagesRead === 'function') {
+          onMessagesRead(project._id);
+        }
+      }
+    } catch (error) {
+      console.error('Error marking messages as read:', error);
+    } finally {
+      setIsMarkingRead(false);
+    }
   };
 
   const getTeamMembers = () => {
@@ -298,12 +595,38 @@ const ProjectChat = ({ project, currentUser, onClose }) => {
               <h3 className="chat-project-name">{project.name}</h3>
               <p className="chat-team-count">
                 {getTeamMembers().length} members • {activeUsers.length} online
-                {!isConnected && <span style={{color: '#ef4444'}}> • Disconnected</span>}
+                <span className={`connection-status ${isConnected ? 'connected' : 'disconnected'}`}>
+                  • {isConnected ? 'Connected' : 'Connecting...'}
+                </span>
               </p>
             </div>
           </div>
-          <button className="chat-close-btn" onClick={onClose}>×</button>
+          <div className="chat-header-actions">
+            <button 
+              className="clear-history-btn"
+              onClick={() => setShowClearConfirm(true)}
+              title="Clear chat history"
+              disabled={isClearingHistory}
+            >
+              🗑️
+            </button>
+            <button className="chat-close-btn" onClick={onClose}>×</button>
+          </div>
         </div>
+
+        {/* Error/Success Notifications */}
+        {error && (
+          <div className="chat-notification error">
+            <span>{error}</span>
+            <button onClick={() => setError(null)}>×</button>
+          </div>
+        )}
+        {success && (
+          <div className="chat-notification success">
+            <span>{success}</span>
+            <button onClick={() => setSuccess(null)}>×</button>
+          </div>
+        )}
 
         <div className="chat-body">
           {/* Team Members Sidebar */}
@@ -321,7 +644,7 @@ const ProjectChat = ({ project, currentUser, onClose }) => {
                     <div key={employee._id || employee.employeeId} className="team-member-item">
                       <div className="member-avatar-wrapper">
                         <img 
-                          src={employee.photo || 'https://via.placeholder.com/40'} 
+                          src={employee.photo || generatePlaceholderImage(employee.name ? employee.name.charAt(0) : 'T', 40)} 
                           alt={employee.name}
                           className="member-avatar"
                         />
@@ -348,9 +671,12 @@ const ProjectChat = ({ project, currentUser, onClose }) => {
                 >
                   {!msg.isCurrentUser && (
                     <img 
-                      src={msg.senderPhoto} 
+                      src={msg.senderPhoto || generatePlaceholderImage(msg.senderName ? msg.senderName.charAt(0) : 'U')} 
                       alt={msg.senderName}
                       className="message-avatar"
+                      onError={(e) => {
+                        e.target.src = generatePlaceholderImage(msg.senderName ? msg.senderName.charAt(0) : 'U');
+                      }}
                     />
                   )}
                   <div className="message-content">
@@ -362,20 +688,71 @@ const ProjectChat = ({ project, currentUser, onClose }) => {
                       {msg.attachment && (
                         <div className="message-attachment">
                           {msg.attachment.type.startsWith('image/') ? (
-                            <img 
-                              src={msg.attachment.url} 
-                              alt={msg.attachment.name}
-                              className="message-image"
-                              onClick={() => window.open(msg.attachment.url, '_blank')}
-                            />
-                          ) : (
-                            <div className="message-file" onClick={() => window.open(msg.attachment.url, '_blank')}>
-                              <div className="message-file-icon">
-                                {getFileIcon(msg.attachment.type)}
+                            <div className="message-image-container">
+                              <img 
+                                src={msg.attachment.url} 
+                                alt={msg.attachment.name}
+                                className="message-image"
+                                onClick={() => window.open(msg.attachment.url, '_blank')}
+                              />
+                              <div className="message-image-overlay">
+                                <button 
+                                  className="download-btn image-download"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    downloadFile(msg.attachment.url, msg.attachment.name, e);
+                                  }}
+                                  title="Download image"
+                                >
+                                  📥
+                                </button>
+                                <button 
+                                  className="view-btn image-view"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    window.open(msg.attachment.url, '_blank');
+                                  }}
+                                  title="View full size"
+                                >
+                                  🔍
+                                </button>
                               </div>
-                              <div className="message-file-details">
-                                <p className="message-file-name">{msg.attachment.name}</p>
-                                <p className="message-file-size">{formatFileSize(msg.attachment.size)}</p>
+                            </div>
+                          ) : (
+                            <div className="message-file">
+                              <div className="message-file-content" onClick={() => window.open(msg.attachment.url, '_blank')}>
+                                <div className="message-file-icon">
+                                  {getFileIcon(msg.attachment.type)}
+                                </div>
+                                <div className="message-file-details">
+                                  <p className="message-file-name">{msg.attachment.name}</p>
+                                  <p className="message-file-size">
+                                    {formatFileSize(msg.attachment.size)}
+                                    <span className="cloud-indicator" title="Stored in cloud">☁️</span>
+                                  </p>
+                                </div>
+                              </div>
+                              <div className="message-file-actions">
+                                <button 
+                                  className="download-btn file-download"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    downloadFile(msg.attachment.url, msg.attachment.name, e);
+                                  }}
+                                  title="Download file"
+                                >
+                                  📥 Download
+                                </button>
+                                <button 
+                                  className="view-btn file-view"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    window.open(msg.attachment.url, '_blank');
+                                  }}
+                                  title="Open file"
+                                >
+                                  👁️ View
+                                </button>
                               </div>
                             </div>
                           )}
@@ -386,9 +763,12 @@ const ProjectChat = ({ project, currentUser, onClose }) => {
                   </div>
                   {msg.isCurrentUser && (
                     <img 
-                      src={msg.senderPhoto} 
+                      src={msg.senderPhoto || generatePlaceholderImage(msg.senderName ? msg.senderName.charAt(0) : 'U')} 
                       alt={msg.senderName}
                       className="message-avatar"
+                      onError={(e) => {
+                        e.target.src = generatePlaceholderImage(msg.senderName ? msg.senderName.charAt(0) : 'U');
+                      }}
                     />
                   )}
                 </div>
@@ -458,7 +838,7 @@ const ProjectChat = ({ project, currentUser, onClose }) => {
               type="file"
               className="file-input-hidden"
               onChange={handleFileSelect}
-              accept="image/*,video/*,.pdf,.doc,.docx,.xls,.xlsx,.zip,.rar"
+              accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip,.rar,.7z"
             />
             <button 
               type="button"
@@ -484,6 +864,50 @@ const ProjectChat = ({ project, currentUser, onClose }) => {
           </div>
         </form>
       </div>
+
+      {/* Clear History Confirmation Modal */}
+      {showClearConfirm && (
+        <div className="modal-overlay">
+          <div className="confirmation-modal">
+            <div className="modal-header">
+              <h3>Clear Chat History</h3>
+              <button 
+                className="modal-close"
+                onClick={() => setShowClearConfirm(false)}
+              >
+                ×
+              </button>
+            </div>
+            <div className="modal-body">
+              <div className="warning-icon">⚠️</div>
+              <p><strong>Are you sure you want to clear your chat history?</strong></p>
+              <p>This action will:</p>
+              <ul>
+                <li>Hide all current messages for you only</li>
+                <li>Other team members will still see their messages</li>
+                <li>New messages will continue to appear normally</li>
+                <li><strong>You can't restore hidden messages!</strong></li>
+              </ul>
+            </div>
+            <div className="modal-actions">
+              <button 
+                className="cancel-btn"
+                onClick={() => setShowClearConfirm(false)}
+                disabled={isClearingHistory}
+              >
+                Cancel
+              </button>
+              <button 
+                className="confirm-btn danger"
+                onClick={handleClearHistory}
+                disabled={isClearingHistory}
+              >
+                {isClearingHistory ? 'Clearing...' : 'Clear History'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
