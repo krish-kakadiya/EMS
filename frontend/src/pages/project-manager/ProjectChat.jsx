@@ -117,6 +117,12 @@ const ProjectChat = ({ project, currentUser, onClose, onMessagesRead }) => {
     }
   }, [messages.length]); // Only depend on message count, not entire messages array
 
+  // Helper: derive stable project id with fallbacks
+  const getProjectId = (proj) => {
+    if (!proj) return undefined;
+    return proj._id || proj.id || proj.projectId || (proj.project && (proj.project._id || proj.project.id));
+  };
+
   // Initialize Socket.IO connection
   useEffect(() => {
     if (!project || !currentUser) {
@@ -146,6 +152,12 @@ const ProjectChat = ({ project, currentUser, onClose, onMessagesRead }) => {
       }
     }
 
+    const resolvedProjectId = getProjectId(project);
+    if (!resolvedProjectId) {
+      console.error('ProjectChat: Unable to resolve project id from project object:', project);
+      return;
+    }
+
     // Create socket connection
     socketRef.current = io(SOCKET_SERVER_URL, {
       transports: ['websocket', 'polling'], // Allow fallback to polling
@@ -168,7 +180,7 @@ const ProjectChat = ({ project, currentUser, onClose, onMessagesRead }) => {
       
       // Join project room
       const joinData = {
-        projectId: project._id,
+        projectId: resolvedProjectId,
         userId: userId,
         userName: userName,
         userPhoto: currentUser.photo || 
@@ -207,7 +219,7 @@ const ProjectChat = ({ project, currentUser, onClose, onMessagesRead }) => {
       
       // Rejoin project room after reconnection
       socket.emit('join_project', {
-        projectId: project._id,
+        projectId: resolvedProjectId,
         userId: userId,
         userName: userName,
         userPhoto: currentUser.photo || 
@@ -236,6 +248,16 @@ const ProjectChat = ({ project, currentUser, onClose, onMessagesRead }) => {
       
       // Mark all messages as read when chat is opened
       markAllMessagesAsRead();
+    });
+
+    socket.on('joined_project', (data) => {
+      console.log('🟢 Join acknowledged by server:', data);
+    });
+
+    socket.on('join_error', (err) => {
+      console.error('🔴 Join project failed:', err);
+      setError(err.message || 'Failed to join project room');
+      setTimeout(() => setError(null), 8000);
     });
 
     socket.on('receive_message', (msg) => {
@@ -319,15 +341,21 @@ const ProjectChat = ({ project, currentUser, onClose, onMessagesRead }) => {
         socketRef.current = null;
       }
     };
-  }, [project._id, currentUser._id]); // Only depend on IDs, not entire objects
+  }, [project?._id, currentUser._id]); // Only depend on IDs, not entire objects
 
   // Handle typing indicator
   const handleTyping = () => {
     if (!socketRef.current) return;
 
+    const resolvedProjectId = getProjectId(project);
+    if (!resolvedProjectId) {
+      console.error('Typing aborted: unresolved project id');
+      return;
+    }
+
     if (!isTyping) {
       socketRef.current.emit('typing', {
-        projectId: project._id,
+        projectId: resolvedProjectId,
         userName: currentUser.name
       });
       setIsTyping(true);
@@ -341,7 +369,7 @@ const ProjectChat = ({ project, currentUser, onClose, onMessagesRead }) => {
     // Stop typing after 2 seconds of inactivity
     typingTimeoutRef.current = setTimeout(() => {
       socketRef.current.emit('stop_typing', {
-        projectId: project._id,
+        projectId: resolvedProjectId,
         userName: currentUser.name
       });
       setIsTyping(false);
@@ -461,8 +489,16 @@ const ProjectChat = ({ project, currentUser, onClose, onMessagesRead }) => {
       }
 
       // Send message via socket
+      const resolvedProjectId = getProjectId(project);
+      if (!resolvedProjectId) {
+        console.error('Cannot send message: unresolved project id');
+        setError('Cannot send: project id missing');
+        setTimeout(() => setError(null), 5000);
+        return;
+      }
+
       const messageData = {
-        projectId: project._id,
+        projectId: resolvedProjectId,
         senderId: userId,
         senderName: userName,
         senderPhoto: userPhoto,
@@ -473,7 +509,30 @@ const ProjectChat = ({ project, currentUser, onClose, onMessagesRead }) => {
       console.log('🚀 SOCKET CONNECTED:', socketRef.current.connected);
       console.log('🚀 SOCKET ID:', socketRef.current.id);
       
-      socketRef.current.emit('send_message', messageData);
+      // Optimistic UI insert
+      const tempId = `temp-${Date.now()}`;
+      setMessages(prev => ([...prev, {
+        id: tempId,
+        senderId: userId,
+        senderName: userName,
+        senderPhoto: userPhoto,
+        message: newMessage.trim(),
+        timestamp: new Date(),
+        isCurrentUser: true,
+        attachment: attachmentData,
+        pending: true
+      }]));
+
+      socketRef.current.emit('send_message', messageData, (ack) => {
+        if (ack && ack.success && ack.message) {
+          setMessages(prev => prev.map(m => m.id === tempId ? { ...m, id: ack.message.id, pending: false, timestamp: new Date(ack.message.timestamp) } : m));
+        } else if (ack && ack.error) {
+          console.error('Message rejected:', ack.error);
+          setMessages(prev => prev.map(m => m.id === tempId ? { ...m, failed: true } : m));
+        } else {
+          // No ack received; leave optimistic message (server will also push real one)
+        }
+      });
 
       // Clear input and file
       setNewMessage('');
@@ -481,7 +540,7 @@ const ProjectChat = ({ project, currentUser, onClose, onMessagesRead }) => {
       
       // Stop typing indicator
       socketRef.current.emit('stop_typing', {
-        projectId: project._id,
+        projectId: resolvedProjectId,
         userName: userName
       });
       setIsTyping(false);

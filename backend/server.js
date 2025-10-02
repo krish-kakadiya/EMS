@@ -129,69 +129,69 @@ const startServer = async () => {
             // ===== CHAT SYSTEM EVENTS =====
 
             // Join project chat room
-            socket.on('join_project', async (data) => {
-                const { projectId, userId, userName, userPhoto } = data;
-                
-                socket.join(projectId);
-                
-                // Store user info
-                if (!activeUsers.has(projectId)) {
-                    activeUsers.set(projectId, new Map());
-                }
-                activeUsers.get(projectId).set(socket.id, {
-                    userId,
-                    userName,
-                    userPhoto,
-                    socketId: socket.id
-                });
-
-                console.log(`User ${userName} joined project chat ${projectId}`);
-
-                // Notify others in the room
-                socket.to(projectId).emit('user_joined', {
-                    userId,
-                    userName,
-                    userPhoto,
-                    timestamp: new Date()
-                });
-
-                // Send active users list
-                const projectUsers = Array.from(activeUsers.get(projectId).values());
-                io.to(projectId).emit('active_users', projectUsers);
-
-                // Load message history (exclude messages hidden by this user)
+            socket.on('join_project', async (data = {}) => {
                 try {
-                    // Check if user has hidden messages for this project
-                    const hiddenMessage = await HiddenMessage.findOne({ userId, projectId });
-                    
-                    let messages = [];
-                    if (hiddenMessage) {
-                        // Get messages created after the user cleared their history
-                        messages = await Message.find({ 
-                            projectId,
-                            timestamp: { $gt: hiddenMessage.hiddenAt }
-                        })
-                        .sort({ timestamp: 1 })
-                        .limit(100)
-                        .lean();
-                    } else {
-                        // Get all messages if user hasn't cleared history
-                        messages = await Message.find({ projectId })
+                    const { projectId, userId, userName, userPhoto } = data;
+
+                    if (!projectId || !userId) {
+                        socket.emit('join_error', { message: 'Missing projectId or userId' });
+                        return;
+                    }
+                    if (!mongoose.Types.ObjectId.isValid(projectId)) {
+                        socket.emit('join_error', { message: 'Invalid projectId format' });
+                        return;
+                    }
+
+                    socket.join(projectId);
+
+                    if (!activeUsers.has(projectId)) {
+                        activeUsers.set(projectId, new Map());
+                    }
+                    activeUsers.get(projectId).set(socket.id, {
+                        userId,
+                        userName,
+                        userPhoto,
+                        socketId: socket.id
+                    });
+
+                    console.log(`User ${userName || userId} joined project chat ${projectId}`);
+                    socket.emit('joined_project', { projectId, userId, userName });
+
+                    socket.to(projectId).emit('user_joined', {
+                        userId,
+                        userName,
+                        userPhoto,
+                        timestamp: new Date()
+                    });
+
+                    const projectUsers = Array.from(activeUsers.get(projectId).values());
+                    io.to(projectId).emit('active_users', projectUsers);
+
+                    try {
+                        const hiddenMessage = await HiddenMessage.findOne({ userId, projectId });
+                        let messages = [];
+                        const baseQuery = { projectId };
+                        if (hiddenMessage) {
+                            baseQuery.timestamp = { $gt: hiddenMessage.hiddenAt };
+                        }
+                        messages = await Message.find(baseQuery)
                             .sort({ timestamp: 1 })
                             .limit(100)
                             .lean();
+                        socket.emit('message_history', messages);
+                    } catch (msgErr) {
+                        console.error('Error loading messages:', msgErr);
+                        socket.emit('error', { message: 'Failed to load message history' });
                     }
-                    
-                    socket.emit('message_history', messages);
-                } catch (error) {
-                    console.error('Error loading messages:', error);
-                    socket.emit('error', { message: 'Failed to load message history' });
+                } catch (e) {
+                    console.error('join_project fatal error:', e);
+                    socket.emit('join_error', { message: 'Internal server error joining project' });
                 }
             });
 
             // Handle sending messages
-            socket.on('send_message', async (data) => {
-                const { projectId, senderId, senderName, senderPhoto, message, attachment } = data;
+            socket.on('send_message', async (data, ack) => {
+                const { projectId, senderId, senderName, senderPhoto, message, attachment } = data || {};
 
                 try {
                     // Parse attachment if it's a string (Socket.IO serialization issue)
@@ -209,14 +209,14 @@ const startServer = async () => {
                         parsedAttachment = null;
                     }
 
-                    // Validate required fields
-                    if (!projectId || !senderId || !senderName) {
-                        throw new Error('Missing required fields: projectId, senderId, or senderName');
+                    if (!projectId || !senderId) {
+                        throw new Error('Missing projectId or senderId');
                     }
-
-                    // Validate projectId format
                     if (!mongoose.Types.ObjectId.isValid(projectId)) {
-                        throw new Error('Invalid projectId format');
+                        throw new Error('Invalid projectId');
+                    }
+                    if (!senderName) {
+                        throw new Error('Missing senderName');
                     }
 
                     console.log('Creating message with data:', {
@@ -242,7 +242,7 @@ const startServer = async () => {
                     await newMessage.save();
 
                     // Broadcast to all users in the project room
-                    io.to(projectId).emit('receive_message', {
+                    const payload = {
                         id: newMessage._id,
                         projectId: newMessage.projectId,
                         senderId: newMessage.senderId,
@@ -251,7 +251,12 @@ const startServer = async () => {
                         message: newMessage.message,
                         attachment: newMessage.attachment,
                         timestamp: newMessage.timestamp
-                    });
+                    };
+
+                    io.to(projectId).emit('receive_message', payload);
+                    if (typeof ack === 'function') {
+                        ack({ success: true, message: payload });
+                    }
 
                     console.log(`Message sent in project ${projectId} by ${senderName}`);
                 } catch (error) {
@@ -262,10 +267,14 @@ const startServer = async () => {
                         stack: error.stack,
                         data: { projectId, senderId, senderName, message, attachment: attachment }
                     });
-                    socket.emit('error', { 
+                    const errPayload = { 
                         message: 'Failed to send message',
                         details: error.message 
-                    });
+                    };
+                    socket.emit('error', errPayload);
+                    if (typeof ack === 'function') {
+                        ack({ success: false, error: errPayload });
+                    }
                 }
             });
 
