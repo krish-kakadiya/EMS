@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useSelector } from 'react-redux';
 import { formatDDMMYY } from '../../utils/dateFormat.js';
 import "./Dashboard.css";
 import ProjectChat from './ProjectChat';
@@ -11,6 +12,9 @@ import {
 } from '../../axios/projectTaskApi';
 
 const Dashboard = () => {
+  // Get current user from Redux store
+  const { user: currentUser } = useSelector((state) => state.auth);
+  
   const [projects, setProjects] = useState([]);
   const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -27,7 +31,7 @@ const Dashboard = () => {
   const [editTeamSelected, setEditTeamSelected] = useState([]);
   const [selectedEmployees, setSelectedEmployees] = useState([]);
   const [activeFilter, setActiveFilter] = useState('All');
-  const [currentUser, setCurrentUser] = useState(null);
+  const [unreadMessages, setUnreadMessages] = useState({});
 
   const [newProject, setNewProject] = useState({
     name: '',
@@ -80,9 +84,8 @@ const Dashboard = () => {
         setEmployees(empRes.data.employees || []);
         setTasks(taskRes.data.tasks || []);
         
-        if (empRes.data.employees && empRes.data.employees.length > 0) {
-          setCurrentUser(empRes.data.employees[0]);
-        }
+        // Load unread message counts for each project
+        await loadUnreadMessageCounts(projRes.data.projects || []);
       } catch (e) {
         setError(e.response?.data?.message || 'Failed to load dashboard data');
       } finally { setLoading(false); }
@@ -205,9 +208,85 @@ const Dashboard = () => {
     setShowTeamView(true);
   };
 
+  const loadUnreadMessageCounts = async (projectsList = projects) => {
+    if (!currentUser || !projectsList || !Array.isArray(projectsList)) {
+      console.warn('loadUnreadMessageCounts: Missing currentUser or projectsList', { currentUser, projectsList });
+      return;
+    }
+    
+    const counts = {};
+    try {
+      await Promise.all(
+        projectsList.map(async (project) => {
+          try {
+            const response = await fetch(
+              `http://localhost:3000/api/chat/unread/${project._id}/${currentUser._id || currentUser.employeeId}`
+            );
+            if (response.ok) {
+              const data = await response.json();
+              if (data.success) {
+                counts[project._id] = data.count;
+              }
+            }
+          } catch (err) {
+            console.error(`Failed to load unread count for project ${project._id}:`, err);
+          }
+        })
+      );
+      setUnreadMessages(counts);
+    } catch (error) {
+      console.error('Error loading unread message counts:', error);
+    }
+  };
+
   const handleChatOpen = (project) => {
-    setChatProject(project);
+    // Clear any existing errors first
+    setError(null);
+    
+    if (!currentUser) {
+      setError('User not authenticated. Please refresh the page.');
+      setTimeout(() => setError(null), 5000);
+      return;
+    }
+
+    if (!project) {
+      setError('Invalid project selected.');
+      setTimeout(() => setError(null), 5000);
+      return;
+    }
+
+    // Project managers and admins always have access to all project chats
+    // Other users need to be team members
+    const hasAccess = 
+      currentUser.role === 'pm' || 
+      currentUser.role === 'project-manager' ||
+      currentUser.role === 'admin' ||
+      currentUser.role === 'hr' ||
+      project.teamMembers?.some(member => {
+        const memberId = typeof member === 'string' ? member : (member._id || member.employeeId);
+        return memberId === currentUser._id || memberId === currentUser.employeeId;
+      });
+
+    if (!hasAccess) {
+      setError('You are not authorized to access this project chat.');
+      setTimeout(() => setError(null), 5000);
+      return;
+    }
+
+    // Ensure the project has required fields for chat
+    const chatProject = {
+      ...project,
+      teamMembers: project.teamMembers || []
+    };
+
+    setChatProject(chatProject);
     setShowChat(true);
+    
+    // Clear unread count for this project
+    setUnreadMessages(prev => ({
+      ...prev,
+      [project._id]: 0
+    }));
   };
 
   const getActiveTaskCount = (employee, project) => {
@@ -274,16 +353,51 @@ const Dashboard = () => {
           <h2 className="header-title">Project Dashboard</h2>
           <p className="header-subtitle">Manage and track your projects efficiently</p>
         </div>
-        <button 
-          className="add-project-btn"
-          onClick={() => setShowAddProject(true)}
-          disabled={loading}
-        >
-          <span className="btn-text">{loading ? 'Loading...' : 'Add New Project'}</span>
-          <div className="btn-shine"></div>
-        </button>
+        <div style={{ display: 'flex', gap: '12px' }}>
+          <button 
+            className="add-project-btn"
+            onClick={() => setShowAddProject(true)}
+            disabled={loading}
+          >
+            <span className="btn-text">{loading ? 'Loading...' : 'Add New Project'}</span>
+            <div className="btn-shine"></div>
+          </button>
+          
+          {/* Debug button for testing chat */}
+          {process.env.NODE_ENV === 'development' && projects.length > 0 && (
+            <button 
+              style={{
+                background: '#10b981',
+                color: 'white',
+                border: 'none',
+                padding: '10px 20px',
+                borderRadius: '8px',
+                cursor: 'pointer'
+              }}
+              onClick={() => {
+                const testProject = projects[0];
+                console.log('Testing chat with project:', testProject);
+                console.log('Current user:', currentUser);
+                handleChatOpen(testProject);
+              }}
+            >
+              Test Chat
+            </button>
+          )}
+        </div>
       </div>
-      {error && <div className="error-banner">{error}</div>}
+      {error && (
+        <div className="error-banner">
+          <span>{error}</span>
+          <button 
+            className="error-close-btn" 
+            onClick={() => setError(null)}
+            title="Close error message"
+          >
+            ×
+          </button>
+        </div>
+      )}
 
       <div className="stats-container">
         <div className="stat-card">
@@ -468,6 +582,9 @@ const Dashboard = () => {
                     <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
                   </svg>
                   Open Project Chat
+                  {unreadMessages[project._id] > 0 && (
+                    <span className="unread-badge">{unreadMessages[project._id]}</span>
+                  )}
                 </button>
               </div>
             </div>
@@ -738,13 +855,22 @@ const Dashboard = () => {
         </div>
       )}
 
-      {showChat && chatProject && (
+      {showChat && chatProject && currentUser && (
         <ProjectChat 
           project={chatProject}
           currentUser={currentUser}
-          onClose={() => setShowChat(false)}
+          onClose={() => {
+            setShowChat(false);
+            setChatProject(null);
+          }}
+          onMessagesRead={(projectId) => {
+            // Refresh unread counts when messages are read
+            loadUnreadMessageCounts();
+          }}
         />
       )}
+      
+
     </div>
   );
 };
