@@ -570,7 +570,25 @@ const ProjectChat = ({ project, currentUser, onClose, onMessagesRead }) => {
   };
 
   const getTeamMembers = () => {
-    return project.teamMembers || [];
+    const members = [];
+    
+    // Add project manager if available
+    if (project.manager) {
+      members.push(project.manager);
+    }
+    
+    // Add team members
+    if (project.teamMembers && Array.isArray(project.teamMembers)) {
+      // Filter out duplicates (in case manager is also in teamMembers)
+      const managerId = project.manager?._id || project.manager?.employeeId;
+      const uniqueMembers = project.teamMembers.filter(member => {
+        const memberId = member._id || member.employeeId;
+        return memberId !== managerId;
+      });
+      members.push(...uniqueMembers);
+    }
+    
+    return members;
   };
 
   const isUserOnline = (member) => {
@@ -592,11 +610,11 @@ const ProjectChat = ({ project, currentUser, onClose, onMessagesRead }) => {
               <span className="group-icon">👥</span>
             </button>
             <div className="chat-header-info">
-              <h3 className="chat-project-name">{project.name}</h3>
+              <h3 className="chat-project-name">🚀 {project.name} - Live Team Chat</h3>
               <p className="chat-team-count">
                 {getTeamMembers().length} members • {activeUsers.length} online
                 <span className={`connection-status ${isConnected ? 'connected' : 'disconnected'}`}>
-                  • {isConnected ? 'Connected' : 'Connecting...'}
+                  • {isConnected ? '🟢 Live' : '🔴 Connecting...'}
                 </span>
               </p>
             </div>

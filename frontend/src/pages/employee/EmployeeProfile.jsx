@@ -465,6 +465,7 @@ const EmployeeProfile = () => {
       projectData = {
         _id: task.project._id || task.project.id,
         name: task.project.name || 'Project Chat',
+        manager: task.project.manager || null,
         teamMembers: Array.isArray(task.project.teamMembers) ? [...task.project.teamMembers] : []
       };
     } else {
@@ -472,6 +473,7 @@ const EmployeeProfile = () => {
       projectData = {
         _id: task.project,
         name: task.name ? `${task.name} - Project Chat` : 'Project Chat',
+        manager: null,
         teamMembers: []
       };
     }
@@ -1050,7 +1052,7 @@ const EmployeeProfile = () => {
                             title="Open live chat with project team"
                           >
                             <FaComments style={{ marginRight: '8px' }} />
-                            Open Project Chat
+                            🚀 Live Team Chat
                             {(() => {
                               const projectId = typeof task.project === 'object' 
                                 ? (task.project._id || task.project.id) 
@@ -1131,7 +1133,7 @@ const EmployeeProfile = () => {
                       
                       <div className="emp-project-actions">
                         <button 
-                          className="emp-project-chat-btn"
+                          className="emp-project-chat-btn live-chat-btn"
                           onClick={() => {
                             setSelectedTaskForChat(project);
                             setShowTaskChat(true);
@@ -1141,7 +1143,7 @@ const EmployeeProfile = () => {
                           title="Open project team chat"
                         >
                           <FaComments style={{ marginRight: '8px' }} />
-                          Team Chat
+                          🚀 Live Team Chat
                           {unreadMessages[project._id] > 0 && (
                             <span className="emp-unread-badge">{unreadMessages[project._id]}</span>
                           )}
