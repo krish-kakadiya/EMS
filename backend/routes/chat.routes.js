@@ -4,19 +4,20 @@ import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
 import { Message } from '../server.js';
+import cloudinary from '../config/cloudinary.config.js';
 
 const router = express.Router();
 
-// Create uploads directory if it doesn't exist
-const uploadsDir = 'uploads';
-if (!fs.existsSync(uploadsDir)) {
-    fs.mkdirSync(uploadsDir, { recursive: true });
+// Create temporary uploads directory if it doesn't exist
+const tempUploadsDir = 'uploads/temp';
+if (!fs.existsSync(tempUploadsDir)) {
+    fs.mkdirSync(tempUploadsDir, { recursive: true });
 }
 
-// Configure multer for file uploads
+// Configure multer for temporary file uploads before Cloudinary
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
-        cb(null, uploadsDir);
+        cb(null, tempUploadsDir);
     },
     filename: (req, file, cb) => {
         const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
@@ -26,22 +27,37 @@ const storage = multer.diskStorage({
 
 const upload = multer({
     storage: storage,
-    limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit
+    limits: { fileSize: 100 * 1024 * 1024 }, // 100MB limit (Cloudinary supports larger files)
     fileFilter: (req, file, cb) => {
-        const allowedTypes = /jpeg|jpg|png|gif|pdf|doc|docx|xls|xlsx|zip|rar|mp4|mov|avi/;
+        // More comprehensive file type support for Cloudinary
+        const allowedTypes = /jpeg|jpg|png|gif|webp|svg|pdf|doc|docx|xls|xlsx|ppt|pptx|txt|zip|rar|7z|mp4|mov|avi|mkv|webm|mp3|wav|ogg/;
         const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
-        const mimetype = allowedTypes.test(file.mimetype);
+        const mimetype = file.mimetype && (
+            file.mimetype.startsWith('image/') ||
+            file.mimetype.startsWith('video/') ||
+            file.mimetype.startsWith('audio/') ||
+            file.mimetype.includes('pdf') ||
+            file.mimetype.includes('document') ||
+            file.mimetype.includes('spreadsheet') ||
+            file.mimetype.includes('presentation') ||
+            file.mimetype.includes('text') ||
+            file.mimetype.includes('zip') ||
+            file.mimetype.includes('rar') ||
+            file.mimetype.includes('7z')
+        );
         
         if (mimetype && extname) {
             return cb(null, true);
         } else {
-            cb(new Error('Invalid file type. Allowed types: images, PDFs, documents, videos, archives'));
+            cb(new Error('Invalid file type. Allowed types: images, videos, audio, documents, archives'));
         }
     }
 });
 
-// Upload file endpoint
-router.post('/upload', upload.single('file'), (req, res) => {
+// Upload file endpoint with Cloudinary
+router.post('/upload', upload.single('file'), async (req, res) => {
+    let uploadResult = null;
+    
     try {
         if (!req.file) {
             return res.status(400).json({ 
@@ -50,44 +66,109 @@ router.post('/upload', upload.single('file'), (req, res) => {
             });
         }
 
-        const fileUrl = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
-        
+        const filePath = req.file.path;
+        const fileName = req.file.originalname;
+        const fileSize = req.file.size;
+        const mimeType = req.file.mimetype;
+
+        // Determine Cloudinary resource type
+        let resourceType = 'auto';
+        if (mimeType.startsWith('image/')) {
+            resourceType = 'image';
+        } else if (mimeType.startsWith('video/')) {
+            resourceType = 'video';
+        } else if (mimeType.startsWith('audio/')) {
+            resourceType = 'video'; // Cloudinary uses 'video' for audio files
+        } else {
+            resourceType = 'raw'; // For documents, archives, etc.
+        }
+
+        // Upload to Cloudinary
+        uploadResult = await cloudinary.uploader.upload(filePath, {
+            folder: 'chat_attachments',
+            public_id: `chat_${Date.now()}_${Math.round(Math.random() * 1E9)}`,
+            resource_type: resourceType,
+            use_filename: true,
+            unique_filename: true,
+            // Optimization for images
+            ...(resourceType === 'image' && {
+                transformation: [
+                    { width: 2000, height: 2000, crop: 'limit' },
+                    { fetch_format: 'auto', quality: 'auto' }
+                ]
+            })
+        });
+
+        // Clean up temporary file
+        try {
+            await fs.promises.unlink(filePath);
+        } catch (unlinkError) {
+            console.warn('Failed to delete temporary file:', unlinkError.message);
+        }
+
         res.json({
             success: true,
             file: {
-                name: req.file.originalname,
-                size: req.file.size,
-                type: req.file.mimetype,
-                url: fileUrl
+                name: fileName,
+                size: fileSize,
+                type: mimeType,
+                url: uploadResult.secure_url,
+                public_id: uploadResult.public_id,
+                resource_type: uploadResult.resource_type
             }
         });
+
     } catch (error) {
-        console.error('Upload error:', error);
+        console.error('Cloudinary upload error:', error);
+
+        // Clean up temporary file on error
+        if (req.file && req.file.path) {
+            try {
+                await fs.promises.unlink(req.file.path);
+            } catch (unlinkError) {
+                console.warn('Failed to delete temporary file after error:', unlinkError.message);
+            }
+        }
+
         res.status(500).json({ 
             success: false,
-            error: 'File upload failed' 
+            error: 'File upload failed: ' + (error.message || 'Unknown error')
         });
     }
 });
 
-// Get messages for a project
+// Get messages for a project (respecting user's hidden messages)
 router.get('/messages/:projectId', async (req, res) => {
     try {
         const { projectId } = req.params;
-        const { limit = 100, skip = 0 } = req.query;
+        const { limit = 100, skip = 0, userId } = req.query;
 
-        const messages = await Message.find({ projectId })
+        let query = { projectId };
+        let total = await Message.countDocuments({ projectId });
+
+        // If userId is provided, check for hidden messages
+        if (userId) {
+            const HiddenMessage = req.app.get('HiddenMessage');
+            const hiddenMessage = await HiddenMessage.findOne({ userId, projectId });
+            
+            if (hiddenMessage) {
+                // Only get messages created after the user cleared their history
+                query.timestamp = { $gt: hiddenMessage.hiddenAt };
+                total = await Message.countDocuments(query);
+            }
+        }
+
+        const messages = await Message.find(query)
             .sort({ timestamp: -1 })
             .limit(parseInt(limit))
             .skip(parseInt(skip))
             .lean();
 
-        const total = await Message.countDocuments({ projectId });
-
         res.json({
             success: true,
             messages: messages.reverse(),
-            total
+            total,
+            hiddenAt: userId ? (await req.app.get('HiddenMessage').findOne({ userId, projectId }))?.hiddenAt : null
         });
     } catch (error) {
         console.error('Error fetching messages:', error);
@@ -111,12 +192,16 @@ router.delete('/messages/:messageId', async (req, res) => {
             });
         }
 
-        // Delete associated file if exists
-        if (message.attachment && message.attachment.url) {
-            const filename = path.basename(message.attachment.url);
-            const filepath = path.join(uploadsDir, filename);
-            if (fs.existsSync(filepath)) {
-                fs.unlinkSync(filepath);
+        // Delete associated file from Cloudinary if exists
+        if (message.attachment && message.attachment.public_id) {
+            try {
+                await cloudinary.uploader.destroy(message.attachment.public_id, {
+                    resource_type: message.attachment.resource_type || 'auto'
+                });
+                console.log('Deleted file from Cloudinary:', message.attachment.public_id);
+            } catch (cloudinaryError) {
+                console.warn('Failed to delete file from Cloudinary:', cloudinaryError.message);
+                // Continue with message deletion even if Cloudinary cleanup fails
             }
         }
 
@@ -270,6 +355,68 @@ router.get('/search/:projectId', async (req, res) => {
         res.status(500).json({ 
             success: false,
             error: 'Failed to search messages' 
+        });
+    }
+});
+
+// Clear chat history for a user (user-specific hiding)
+router.delete('/clear-history/:projectId', async (req, res) => {
+    try {
+        const { projectId } = req.params;
+        const { userId, userRole } = req.body;
+
+        // Validate required fields
+        if (!projectId || !userId || !userRole) {
+            return res.status(400).json({
+                success: false,
+                error: 'Project ID, user ID, and user role are required'
+            });
+        }
+
+        // Validate user role (only project managers and employees can clear history)
+        if (!['pm', 'employee', 'admin', 'hr'].includes(userRole)) {
+            return res.status(403).json({
+                success: false,
+                error: 'Unauthorized: Only project managers and employees can clear chat history'
+            });
+        }
+
+        // Import HiddenMessage model
+        const HiddenMessage = req.app.get('HiddenMessage');
+
+        // Check if user already has hidden messages for this project
+        const existingHidden = await HiddenMessage.findOne({ userId, projectId });
+
+        if (existingHidden) {
+            // Update the hidden timestamp
+            existingHidden.hiddenAt = new Date();
+            await existingHidden.save();
+        } else {
+            // Create new hidden message record
+            await HiddenMessage.create({
+                userId,
+                projectId,
+                hiddenAt: new Date()
+            });
+        }
+
+        console.log(`Chat history cleared for user ${userId} in project ${projectId}`);
+
+        res.json({
+            success: true,
+            message: 'Chat history cleared for user',
+            userId: userId,
+            projectId: projectId
+        });
+
+        // DO NOT emit socket event to all users - this is user-specific clearing
+        // Each user will handle their own message clearing locally
+
+    } catch (error) {
+        console.error('Error clearing chat history:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Failed to clear chat history'
         });
     }
 });

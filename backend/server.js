@@ -7,6 +7,11 @@ import mongoose from 'mongoose';
 
 const port = process.env.PORT || 3000; // Align with frontend axios baseURL
 
+// Clear existing model if it exists (for hot reload)
+if (mongoose.models.Message) {
+    delete mongoose.models.Message;
+}
+
 // Message Schema for Chat
 const messageSchema = new mongoose.Schema({
   projectId: {
@@ -30,10 +35,12 @@ const messageSchema = new mongoose.Schema({
     default: ''
   },
   attachment: {
-    name: String,
-    size: Number,
-    type: String,
-    url: String
+    name: { type: String, required: false },
+    size: { type: Number, required: false },
+    type: { type: String, required: false },
+    url: { type: String, required: false },
+    public_id: { type: String, required: false }, // Cloudinary public_id for deletion
+    resource_type: { type: String, required: false } // Cloudinary resource type (image, video, raw)
   },
   timestamp: {
     type: Date,
@@ -44,10 +51,36 @@ const messageSchema = new mongoose.Schema({
     default: false
   }
 }, {
-  timestamps: true
+  timestamps: true,
+  strict: false // Allow additional fields if needed
 });
 
 const Message = mongoose.model('Message', messageSchema);
+
+// Hidden Messages Schema - tracks which messages each user has hidden
+const hiddenMessageSchema = new mongoose.Schema({
+  userId: {
+    type: String,
+    required: true,
+    index: true
+  },
+  projectId: {
+    type: mongoose.Schema.Types.ObjectId,
+    required: true,
+    index: true
+  },
+  hiddenAt: {
+    type: Date,
+    default: Date.now
+  }
+}, {
+  timestamps: true
+});
+
+// Compound index for efficient queries
+hiddenMessageSchema.index({ userId: 1, projectId: 1 }, { unique: true });
+
+const HiddenMessage = mongoose.model('HiddenMessage', hiddenMessageSchema);
 
 // Store active users per project room
 const activeUsers = new Map();
@@ -66,12 +99,24 @@ const startServer = async () => {
             cors: {
                 origin: (process.env.CORS_ORIGINS || 'http://localhost:5173').split(',').map(o => o.trim()),
                 credentials: true
-            }
+            },
+            pingTimeout: 120000, // 2 minutes
+            pingInterval: 25000, // 25 seconds
+            upgradeTimeout: 30000, // 30 seconds for upgrade
+            allowUpgrades: true,
+            transports: ['websocket', 'polling'],
+            allowEIO3: true
         });
         app.set('io', io); // make io accessible in controllers via req.app.get('io')
+        app.set('HiddenMessage', HiddenMessage); // make HiddenMessage model accessible in routes
 
         io.on('connection', (socket) => {
             console.log('New client connected:', socket.id);
+            
+            // Handle client errors
+            socket.on('error', (error) => {
+                console.error(`Socket error from ${socket.id}:`, error);
+            });
 
             // Original: Optional join room by project or user for future usage
             socket.on('joinProject', (projectId) => {
@@ -114,12 +159,28 @@ const startServer = async () => {
                 const projectUsers = Array.from(activeUsers.get(projectId).values());
                 io.to(projectId).emit('active_users', projectUsers);
 
-                // Load message history
+                // Load message history (exclude messages hidden by this user)
                 try {
-                    const messages = await Message.find({ projectId })
+                    // Check if user has hidden messages for this project
+                    const hiddenMessage = await HiddenMessage.findOne({ userId, projectId });
+                    
+                    let messages = [];
+                    if (hiddenMessage) {
+                        // Get messages created after the user cleared their history
+                        messages = await Message.find({ 
+                            projectId,
+                            timestamp: { $gt: hiddenMessage.hiddenAt }
+                        })
                         .sort({ timestamp: 1 })
                         .limit(100)
                         .lean();
+                    } else {
+                        // Get all messages if user hasn't cleared history
+                        messages = await Message.find({ projectId })
+                            .sort({ timestamp: 1 })
+                            .limit(100)
+                            .lean();
+                    }
                     
                     socket.emit('message_history', messages);
                 } catch (error) {
@@ -133,13 +194,48 @@ const startServer = async () => {
                 const { projectId, senderId, senderName, senderPhoto, message, attachment } = data;
 
                 try {
-                    const newMessage = new Message({
+                    // Parse attachment if it's a string (Socket.IO serialization issue)
+                    let parsedAttachment = attachment;
+                    if (attachment) {
+                        if (typeof attachment === 'string' && attachment.startsWith('{')) {
+                            try {
+                                parsedAttachment = JSON.parse(attachment);
+                            } catch (parseError) {
+                                console.error('Error parsing attachment:', parseError);
+                                parsedAttachment = null;
+                            }
+                        }
+                    } else {
+                        parsedAttachment = null;
+                    }
+
+                    // Validate required fields
+                    if (!projectId || !senderId || !senderName) {
+                        throw new Error('Missing required fields: projectId, senderId, or senderName');
+                    }
+
+                    // Validate projectId format
+                    if (!mongoose.Types.ObjectId.isValid(projectId)) {
+                        throw new Error('Invalid projectId format');
+                    }
+
+                    console.log('Creating message with data:', {
                         projectId,
                         senderId,
                         senderName,
                         senderPhoto,
                         message,
-                        attachment,
+                        attachmentType: typeof parsedAttachment,
+                        attachment: parsedAttachment
+                    });
+
+                    const newMessage = new Message({
+                        projectId,
+                        senderId,
+                        senderName,
+                        senderPhoto,
+                        message: message || '',
+                        attachment: parsedAttachment,
                         timestamp: new Date()
                     });
 
@@ -160,7 +256,16 @@ const startServer = async () => {
                     console.log(`Message sent in project ${projectId} by ${senderName}`);
                 } catch (error) {
                     console.error('Error saving message:', error);
-                    socket.emit('error', { message: 'Failed to send message' });
+                    console.error('Error details:', {
+                        name: error.name,
+                        message: error.message,
+                        stack: error.stack,
+                        data: { projectId, senderId, senderName, message, attachment: attachment }
+                    });
+                    socket.emit('error', { 
+                        message: 'Failed to send message',
+                        details: error.message 
+                    });
                 }
             });
 
@@ -184,6 +289,32 @@ const startServer = async () => {
                     io.to(projectId).emit('message_read', { messageId });
                 } catch (error) {
                     console.error('Error marking message as read:', error);
+                }
+            });
+
+            // Handle bulk messages read status
+            socket.on('messages_read', async (data) => {
+                const { projectId, userId } = data;
+                
+                try {
+                    // Mark all unread messages in this project for this user as read
+                    // (messages that are not sent by this user)
+                    await Message.updateMany(
+                        { 
+                            projectId,
+                            senderId: { $ne: userId },
+                            isRead: false 
+                        },
+                        { $set: { isRead: true } }
+                    );
+
+                    // Notify all users in the project room that messages have been read
+                    io.to(projectId).emit('messages_marked_read', { 
+                        projectId, 
+                        readByUserId: userId 
+                    });
+                } catch (error) {
+                    console.error('Error marking messages as read:', error);
                 }
             });
 
@@ -212,8 +343,8 @@ const startServer = async () => {
             });
 
             // Handle disconnect
-            socket.on('disconnect', () => {
-                console.log('Client disconnected:', socket.id);
+            socket.on('disconnect', (reason) => {
+                console.log('Client disconnected:', socket.id, 'Reason:', reason);
 
                 // Remove user from active users
                 activeUsers.forEach((projectUsers, projectId) => {
@@ -254,5 +385,5 @@ const startServer = async () => {
 
 startServer();
 
-// Export Message model for use in routes if needed
-export { Message };
+// Export models for use in routes if needed
+export { Message, HiddenMessage };
