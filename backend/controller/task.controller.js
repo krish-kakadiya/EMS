@@ -45,7 +45,14 @@ export const listTasks = async (req, res) => {
     if (projectId) filter.project = projectId;
     const tasks = await Task.find(filter)
       .populate('assignedTo', 'name employeeId role')
-      .populate('project', 'code name');
+      .populate({
+        path: 'project',
+        select: 'code name manager teamMembers',
+        populate: [
+          { path: 'manager', select: 'name employeeId role' },
+          { path: 'teamMembers', select: 'name employeeId role' }
+        ]
+      });
     return res.json({ success: true, tasks });
   } catch (error) {
     return res.status(500).json({ success: false, message: 'Error fetching tasks', error: error.message });
@@ -56,7 +63,14 @@ export const getTask = async (req, res) => {
   try {
     const task = await Task.findById(req.params.id)
       .populate('assignedTo', 'name employeeId role')
-      .populate('project', 'code name');
+      .populate({
+        path: 'project',
+        select: 'code name manager teamMembers',
+        populate: [
+          { path: 'manager', select: 'name employeeId role' },
+          { path: 'teamMembers', select: 'name employeeId role' }
+        ]
+      });
     if (!task) return res.status(404).json({ success: false, message: 'Task not found' });
     return res.json({ success: true, task });
   } catch (error) {
@@ -84,7 +98,14 @@ export const updateTask = async (req, res) => {
     }
     const task = await Task.findByIdAndUpdate(req.params.id, updates, { new: true })
       .populate('assignedTo', 'name employeeId role')
-      .populate('project', 'code name');
+      .populate({
+        path: 'project',
+        select: 'code name manager teamMembers',
+        populate: [
+          { path: 'manager', select: 'name employeeId role' },
+          { path: 'teamMembers', select: 'name employeeId role' }
+        ]
+      });
     return res.json({ success: true, task });
   } catch (error) {
     return res.status(500).json({ success: false, message: 'Error updating task', error: error.message });
@@ -106,7 +127,14 @@ export const updateTaskStatus = async (req, res) => {
     // Populate after save so client (PM) sees fresh relations + last message
     const populated = await Task.findById(task._id)
       .populate('assignedTo', 'name employeeId role')
-      .populate('project', 'code name');
+      .populate({
+        path: 'project',
+        select: 'code name manager teamMembers',
+        populate: [
+          { path: 'manager', select: 'name employeeId role' },
+          { path: 'teamMembers', select: 'name employeeId role' }
+        ]
+      });
     // Emit real-time event (global and project room if available)
     try {
       const io = req.app.get('io');
@@ -129,7 +157,14 @@ export const updateTaskStatus = async (req, res) => {
 export const listMyTasks = async (req, res) => {
   try {
     const tasks = await Task.find({ assignedTo: req.user.id })
-      .populate('project', 'code name')
+      .populate({
+        path: 'project',
+        select: 'code name manager teamMembers',
+        populate: [
+          { path: 'manager', select: 'name employeeId role' },
+          { path: 'teamMembers', select: 'name employeeId role' }
+        ]
+      })
       .populate('assignedTo', 'name employeeId');
     return res.json({ success: true, tasks });
   } catch (error) {
@@ -155,7 +190,14 @@ export const employeeUpdateTaskStatus = async (req, res) => {
     await task.save();
     const populated = await Task.findById(task._id)
       .populate('assignedTo', 'name employeeId role')
-      .populate('project', 'code name');
+      .populate({
+        path: 'project',
+        select: 'code name manager teamMembers',
+        populate: [
+          { path: 'manager', select: 'name employeeId role' },
+          { path: 'teamMembers', select: 'name employeeId role' }
+        ]
+      });
     try {
       const io = req.app.get('io');
       if (io) {
@@ -232,7 +274,14 @@ export const employeeLeaveTask = async (req, res) => {
     await task.save();
     const populated = await Task.findById(task._id)
       .populate('assignedTo','name employeeId role')
-      .populate('project','code name');
+      .populate({
+        path: 'project',
+        select: 'code name manager teamMembers',
+        populate: [
+          { path: 'manager', select: 'name employeeId role' },
+          { path: 'teamMembers', select: 'name employeeId role' }
+        ]
+      });
     try {
       const io = req.app.get('io');
       if (io) {
