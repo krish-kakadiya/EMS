@@ -22,7 +22,6 @@ const generatePlaceholderImage = (initials, size = 40, bgColor = '#4A90E2', text
 // Download file function
 const downloadFile = async (fileUrl, fileName, event = null) => {
   try {
-    // Show loading indicator
     const originalText = event?.target?.textContent;
     if (event?.target) {
       event.target.textContent = '⏳ Downloading...';
@@ -50,7 +49,6 @@ const downloadFile = async (fileUrl, fileName, event = null) => {
     document.body.removeChild(link);
     window.URL.revokeObjectURL(url);
     
-    // Show success feedback
     if (event?.target) {
       event.target.textContent = '✅ Downloaded';
       setTimeout(() => {
@@ -62,7 +60,6 @@ const downloadFile = async (fileUrl, fileName, event = null) => {
   } catch (error) {
     console.error('Error downloading file:', error);
     
-    // Reset button state
     if (event?.target) {
       event.target.textContent = '❌ Failed';
       setTimeout(() => {
@@ -71,7 +68,6 @@ const downloadFile = async (fileUrl, fileName, event = null) => {
       }, 2000);
     }
     
-    // Fallback: open in new tab
     setTimeout(() => {
       window.open(fileUrl, '_blank');
     }, 1000);
@@ -99,6 +95,7 @@ const ProjectChat = ({ project, currentUser, onClose, onMessagesRead }) => {
   const fileInputRef = useRef(null);
   const socketRef = useRef(null);
   const typingTimeoutRef = useRef(null);
+  const markReadTimeoutRef = useRef(null);
 
   // Auto-scroll to bottom when new messages arrive
   const scrollToBottom = () => {
@@ -107,15 +104,14 @@ const ProjectChat = ({ project, currentUser, onClose, onMessagesRead }) => {
 
   useEffect(() => {
     scrollToBottom();
-    // Mark messages as read when new messages arrive, but debounce to prevent excessive calls
     if (messages.length > 0) {
       const timeoutId = setTimeout(() => {
         markAllMessagesAsRead();
-      }, 500); // Wait 500ms before marking as read
+      }, 500);
       
       return () => clearTimeout(timeoutId);
     }
-  }, [messages.length]); // Only depend on message count, not entire messages array
+  }, [messages.length]);
 
   // Helper: derive stable project id with fallbacks
   const getProjectId = (proj) => {
@@ -130,7 +126,6 @@ const ProjectChat = ({ project, currentUser, onClose, onMessagesRead }) => {
       return;
     }
 
-    // Validate user has required fields
     const userId = currentUser._id || currentUser.employeeId;
     const userName = currentUser.name;
     
@@ -139,13 +134,11 @@ const ProjectChat = ({ project, currentUser, onClose, onMessagesRead }) => {
       return;
     }
 
-    // Prevent multiple socket connections
     if (socketRef.current) {
       if (socketRef.current.connected) {
         console.log('Socket already connected, skipping initialization');
         return;
       } else {
-        // Clean up existing disconnected socket
         socketRef.current.removeAllListeners();
         socketRef.current.disconnect();
         socketRef.current = null;
@@ -158,27 +151,24 @@ const ProjectChat = ({ project, currentUser, onClose, onMessagesRead }) => {
       return;
     }
 
-    // Create socket connection
     socketRef.current = io(SOCKET_SERVER_URL, {
-      transports: ['websocket', 'polling'], // Allow fallback to polling
+      transports: ['websocket', 'polling'],
       reconnection: true,
       reconnectionDelay: 1000,
-      reconnectionAttempts: 10, // More reconnection attempts
-      timeout: 60000, // Increased timeout for file uploads
-      forceNew: false, // Reuse existing connection
+      reconnectionAttempts: 10,
+      timeout: 60000,
+      forceNew: false,
       upgrade: true,
       rememberUpgrade: true
     });
 
     const socket = socketRef.current;
 
-    // Connection events
     socket.on('connect', () => {
       console.log('🟢 Connected to socket server');
       console.log('🟢 Socket ID:', socket.id);
       setIsConnected(true);
       
-      // Join project room
       const joinData = {
         projectId: resolvedProjectId,
         userId: userId,
@@ -195,9 +185,7 @@ const ProjectChat = ({ project, currentUser, onClose, onMessagesRead }) => {
       console.log('Disconnected from socket server:', reason);
       setIsConnected(false);
       
-      // Auto-reconnect if disconnected unexpectedly
       if (reason === 'io server disconnect') {
-        // Server disconnected us, manually reconnect
         setTimeout(() => {
           socket.connect();
         }, 1000);
@@ -209,15 +197,10 @@ const ProjectChat = ({ project, currentUser, onClose, onMessagesRead }) => {
       setIsConnected(false);
     });
 
-    socket.on('error', (error) => {
-      console.error('🔴 Socket error:', error);
-    });
-
     socket.on('reconnect', (attemptNumber) => {
       console.log('Reconnected to socket server after', attemptNumber, 'attempts');
       setIsConnected(true);
       
-      // Rejoin project room after reconnection
       socket.emit('join_project', {
         projectId: resolvedProjectId,
         userId: userId,
@@ -232,7 +215,6 @@ const ProjectChat = ({ project, currentUser, onClose, onMessagesRead }) => {
       console.error('Reconnection error:', error);
     });
 
-    // Message events
     socket.on('message_history', (history) => {
       const formattedMessages = history.map(msg => ({
         id: msg._id,
@@ -246,7 +228,6 @@ const ProjectChat = ({ project, currentUser, onClose, onMessagesRead }) => {
       }));
       setMessages(formattedMessages);
       
-      // Mark all messages as read when chat is opened
       markAllMessagesAsRead();
     });
 
@@ -260,28 +241,39 @@ const ProjectChat = ({ project, currentUser, onClose, onMessagesRead }) => {
       setTimeout(() => setError(null), 8000);
     });
 
+    // FIX: Prevent duplicate messages by checking if message already exists
     socket.on('receive_message', (msg) => {
       console.log('🔥 RECEIVED MESSAGE:', msg);
-      const formattedMessage = {
-        id: msg.id,
-        senderId: msg.senderId,
-        senderName: msg.senderName,
-        senderPhoto: msg.senderPhoto,
-        message: msg.message,
-        timestamp: new Date(msg.timestamp),
-        isCurrentUser: msg.senderId === userId,
-        attachment: msg.attachment
-      };
-      console.log('🔥 FORMATTED MESSAGE:', formattedMessage);
+      
       setMessages(prev => {
-        console.log('🔥 PREV MESSAGES:', prev.length);
-        const newMessages = [...prev, formattedMessage];
-        console.log('🔥 NEW MESSAGES:', newMessages.length);
-        return newMessages;
+        // Check if message already exists (by ID or timestamp+senderId combination)
+        const messageExists = prev.some(m => 
+          m.id === msg.id || 
+          (m.senderId === msg.senderId && 
+           Math.abs(new Date(m.timestamp) - new Date(msg.timestamp)) < 1000)
+        );
+        
+        if (messageExists) {
+          console.log('🔥 MESSAGE ALREADY EXISTS, SKIPPING');
+          return prev;
+        }
+        
+        const formattedMessage = {
+          id: msg.id,
+          senderId: msg.senderId,
+          senderName: msg.senderName,
+          senderPhoto: msg.senderPhoto,
+          message: msg.message,
+          timestamp: new Date(msg.timestamp),
+          isCurrentUser: msg.senderId === userId,
+          attachment: msg.attachment
+        };
+        
+        console.log('🔥 ADDING NEW MESSAGE');
+        return [...prev, formattedMessage];
       });
     });
 
-    // Typing events
     socket.on('user_typing', (data) => {
       setTypingUser(data.userName);
       setIsTyping(true);
@@ -292,7 +284,6 @@ const ProjectChat = ({ project, currentUser, onClose, onMessagesRead }) => {
       setTypingUser(null);
     });
 
-    // User events
     socket.on('user_joined', (data) => {
       console.log(`${data.userName} joined the chat`);
     });
@@ -311,37 +302,37 @@ const ProjectChat = ({ project, currentUser, onClose, onMessagesRead }) => {
         `${error.message}: ${error.details}` : 
         (error.message || 'A connection error occurred');
       setError(errorMessage);
-      setTimeout(() => setError(null), 10000); // Show error longer for debugging
+      setTimeout(() => setError(null), 10000);
     });
 
-    // Handle messages marked as read event
     socket.on('messages_marked_read', (data) => {
       const { projectId, readByUserId } = data;
       console.log(`Messages marked as read in project ${projectId} by user ${readByUserId}`);
       
-      // If we have an onMessagesRead callback, call it to update parent component
       if (typeof onMessagesRead === 'function') {
         onMessagesRead(projectId);
       }
     });
-
-    // Note: Removed chat_history_cleared event handler since clearing is now user-specific
 
     // Cleanup on unmount
     return () => {
       if (socket) {
         console.log('Cleaning up socket connection');
         socket.off('receive_message');
-        socket.off('typing');
-        socket.off('stop_typing');
+        socket.off('user_typing');
+        socket.off('user_stop_typing');
         socket.off('error');
         socket.off('messages_marked_read');
-        socket.emit('leave_project', { projectId: project._id });
+        socket.emit('leave_project', { projectId: resolvedProjectId });
         socket.disconnect();
         socketRef.current = null;
       }
+      
+      if (markReadTimeoutRef.current) {
+        clearTimeout(markReadTimeoutRef.current);
+      }
     };
-  }, [project?._id, currentUser._id]); // Only depend on IDs, not entire objects
+  }, [project?._id, currentUser?._id]); // Added dependencies for proper refresh
 
   // Handle typing indicator
   const handleTyping = () => {
@@ -361,12 +352,10 @@ const ProjectChat = ({ project, currentUser, onClose, onMessagesRead }) => {
       setIsTyping(true);
     }
 
-    // Clear previous timeout
     if (typingTimeoutRef.current) {
       clearTimeout(typingTimeoutRef.current);
     }
 
-    // Stop typing after 2 seconds of inactivity
     typingTimeoutRef.current = setTimeout(() => {
       socketRef.current.emit('stop_typing', {
         projectId: resolvedProjectId,
@@ -393,7 +382,6 @@ const ProjectChat = ({ project, currentUser, onClose, onMessagesRead }) => {
       );
 
       if (response.data.success) {
-        // Clear local messages immediately for this user only
         setMessages([]);
         setSuccess('Chat history cleared for you. Other team members can still see their messages.');
         setTimeout(() => setSuccess(null), 5000);
@@ -417,15 +405,12 @@ const ProjectChat = ({ project, currentUser, onClose, onMessagesRead }) => {
     try {
       let attachmentData = null;
 
-      // Upload file if selected
       if (selectedFile) {
-        setError(null); // Clear any previous errors
+        setError(null);
         
-        // Check socket connection before file upload
         if (!socketRef.current.connected) {
           console.log('Socket disconnected, attempting to reconnect...');
           socketRef.current.connect();
-          // Wait a bit for reconnection
           await new Promise(resolve => setTimeout(resolve, 2000));
         }
 
@@ -437,7 +422,7 @@ const ProjectChat = ({ project, currentUser, onClose, onMessagesRead }) => {
           formData,
           {
             headers: { 'Content-Type': 'multipart/form-data' },
-            timeout: 300000, // 5 minutes timeout for large files
+            timeout: 300000,
             onUploadProgress: (progressEvent) => {
               const progress = Math.round(
                 (progressEvent.loaded * 100) / progressEvent.total
@@ -457,26 +442,21 @@ const ProjectChat = ({ project, currentUser, onClose, onMessagesRead }) => {
         setUploadProgress(0);
       }
 
-      // Extract user info
       const userId = currentUser._id || currentUser.employeeId;
       const userName = currentUser.name;
-      // Try multiple sources for profile photo
       const userPhoto = currentUser.photo || 
                        (currentUser.profile && currentUser.profile.profilePicture) ||
                        generatePlaceholderImage(userName ? userName.charAt(0) : 'U');
 
-      // Ensure socket is connected before sending message
       if (!socketRef.current.connected) {
         console.log('Socket disconnected before sending message, reconnecting...');
         socketRef.current.connect();
         
-        // Wait for reconnection with timeout
         await new Promise((resolve, reject) => {
           const timeout = setTimeout(() => reject(new Error('Socket reconnection timeout')), 10000);
           
           socketRef.current.once('connect', () => {
             clearTimeout(timeout);
-            // Rejoin project room
             socketRef.current.emit('join_project', {
               projectId: project._id,
               userId: userId,
@@ -488,7 +468,6 @@ const ProjectChat = ({ project, currentUser, onClose, onMessagesRead }) => {
         });
       }
 
-      // Send message via socket
       const resolvedProjectId = getProjectId(project);
       if (!resolvedProjectId) {
         console.error('Cannot send message: unresolved project id');
@@ -506,39 +485,20 @@ const ProjectChat = ({ project, currentUser, onClose, onMessagesRead }) => {
         attachment: attachmentData
       };
       console.log('🚀 SENDING MESSAGE:', messageData);
-      console.log('🚀 SOCKET CONNECTED:', socketRef.current.connected);
-      console.log('🚀 SOCKET ID:', socketRef.current.id);
-      
-      // Optimistic UI insert
-      const tempId = `temp-${Date.now()}`;
-      setMessages(prev => ([...prev, {
-        id: tempId,
-        senderId: userId,
-        senderName: userName,
-        senderPhoto: userPhoto,
-        message: newMessage.trim(),
-        timestamp: new Date(),
-        isCurrentUser: true,
-        attachment: attachmentData,
-        pending: true
-      }]));
 
+      // FIX: Don't add optimistic message, wait for server confirmation
       socketRef.current.emit('send_message', messageData, (ack) => {
-        if (ack && ack.success && ack.message) {
-          setMessages(prev => prev.map(m => m.id === tempId ? { ...m, id: ack.message.id, pending: false, timestamp: new Date(ack.message.timestamp) } : m));
-        } else if (ack && ack.error) {
+        if (ack && ack.error) {
           console.error('Message rejected:', ack.error);
-          setMessages(prev => prev.map(m => m.id === tempId ? { ...m, failed: true } : m));
-        } else {
-          // No ack received; leave optimistic message (server will also push real one)
+          setError('Failed to send message: ' + ack.error);
+          setTimeout(() => setError(null), 5000);
         }
       });
 
-      // Clear input and file
+      // Clear input and file immediately for better UX
       setNewMessage('');
       setSelectedFile(null);
       
-      // Stop typing indicator
       socketRef.current.emit('stop_typing', {
         projectId: resolvedProjectId,
         userName: userName
@@ -554,7 +514,6 @@ const ProjectChat = ({ project, currentUser, onClose, onMessagesRead }) => {
   const handleFileSelect = (e) => {
     const file = e.target.files[0];
     if (file) {
-      // Check file size (max 100MB for Cloudinary)
       if (file.size > 100 * 1024 * 1024) {
         setError('File size should not exceed 100MB');
         setTimeout(() => setError(null), 5000);
@@ -616,7 +575,6 @@ const ProjectChat = ({ project, currentUser, onClose, onMessagesRead }) => {
     try {
       const userId = currentUser._id || currentUser.employeeId;
       
-      // Call API to mark messages as read
       const response = await fetch(`${SOCKET_SERVER_URL}/api/chat/mark-read`, {
         method: 'POST',
         headers: {
@@ -629,13 +587,11 @@ const ProjectChat = ({ project, currentUser, onClose, onMessagesRead }) => {
       });
 
       if (response.ok) {
-        // Emit socket event to notify other users that messages have been read
         socketRef.current.emit('messages_read', {
           projectId: project._id,
           userId: userId
         });
         
-        // Call callback if provided
         if (typeof onMessagesRead === 'function') {
           onMessagesRead(project._id);
         }
@@ -650,14 +606,11 @@ const ProjectChat = ({ project, currentUser, onClose, onMessagesRead }) => {
   const getTeamMembers = () => {
     const members = [];
     
-    // Add project manager if available
     if (project.manager) {
       members.push(project.manager);
     }
     
-    // Add team members
     if (project.teamMembers && Array.isArray(project.teamMembers)) {
-      // Filter out duplicates (in case manager is also in teamMembers)
       const managerId = project.manager?._id || project.manager?.employeeId;
       const uniqueMembers = project.teamMembers.filter(member => {
         const memberId = member._id || member.employeeId;
@@ -894,8 +847,7 @@ const ProjectChat = ({ project, currentUser, onClose, onMessagesRead }) => {
                 <p className="attachment-size">{formatFileSize(selectedFile.size)}</p>
                 {uploadProgress > 0 && uploadProgress < 100 && (
                   <div className="upload-progress-bar">
-                    <div 
-                      className="upload-progress-fill" 
+                    <div className="upload-progress-fill" 
                       style={{ width: `${uploadProgress}%` }}
                     />
                   </div>
