@@ -35,6 +35,11 @@ const EmployeeProfile = () => {
   // Chat state
   const [showTaskChat, setShowTaskChat] = useState(false);
   const [selectedTaskForChat, setSelectedTaskForChat] = useState(null);
+  const [unreadMessages, setUnreadMessages] = useState({});
+  
+  // Projects state
+  const [myProjects, setMyProjects] = useState([]);
+  const [projectsLoading, setProjectsLoading] = useState(false);
   
   const [personalDetails, setPersonalDetails] = useState({
     dob: '',
@@ -300,8 +305,109 @@ const EmployeeProfile = () => {
   useEffect(() => {
     if (activeSection === 'tasks') {
       dispatch(fetchMyTasks());
+    } else if (activeSection === 'projects') {
+      fetchMyProjects();
     }
   }, [activeSection, dispatch]);
+
+  // Load unread message counts when tasks or projects are loaded
+  useEffect(() => {
+    if (activeSection === 'tasks' && Array.isArray(myTasks) && myTasks.length > 0) {
+      loadUnreadMessageCounts();
+    } else if (activeSection === 'projects' && Array.isArray(myProjects) && myProjects.length > 0) {
+      loadUnreadMessageCountsForProjects();
+    }
+  }, [myTasks, myProjects, activeSection, user]);
+
+  const loadUnreadMessageCounts = async () => {
+    if (!user || !Array.isArray(myTasks)) return;
+    
+    const counts = {};
+    try {
+      await Promise.all(
+        myTasks
+          .filter(task => task.project) // Only tasks with projects
+          .map(async (task) => {
+            try {
+              const projectId = typeof task.project === 'object' 
+                ? (task.project._id || task.project.id) 
+                : task.project;
+              
+              if (!projectId) return;
+              
+              const response = await fetch(
+                `http://localhost:3000/api/chat/unread/${projectId}/${user._id || user.employeeId}`
+              );
+              
+              if (response.ok) {
+                const data = await response.json();
+                if (data.success) {
+                  counts[projectId] = data.count;
+                }
+              }
+            } catch (err) {
+              console.error(`Failed to load unread count for task ${task._id}:`, err);
+            }
+          })
+      );
+      setUnreadMessages(counts);
+    } catch (error) {
+      console.error('Error loading unread message counts:', error);
+    }
+  };
+
+  // Fetch employee's projects
+  const fetchMyProjects = async () => {
+    if (!user) return;
+    
+    setProjectsLoading(true);
+    try {
+      const response = await api.get('/projects');
+      if (response.data.success) {
+        // Filter projects where current user is a team member
+        const userProjects = response.data.projects.filter(project => {
+          return project.teamMembers?.some(member => {
+            const memberId = typeof member === 'string' ? member : (member._id || member.employeeId);
+            return memberId === user._id || memberId === user.employeeId;
+          });
+        });
+        setMyProjects(userProjects);
+      }
+    } catch (error) {
+      console.error('Error fetching projects:', error);
+    } finally {
+      setProjectsLoading(false);
+    }
+  };
+
+  const loadUnreadMessageCountsForProjects = async () => {
+    if (!user || !Array.isArray(myProjects)) return;
+    
+    const counts = {};
+    try {
+      await Promise.all(
+        myProjects.map(async (project) => {
+          try {
+            const response = await fetch(
+              `http://localhost:3000/api/chat/unread/${project._id}/${user._id || user.employeeId}`
+            );
+            
+            if (response.ok) {
+              const data = await response.json();
+              if (data.success) {
+                counts[project._id] = data.count;
+              }
+            }
+          } catch (err) {
+            console.error(`Failed to load unread count for project ${project._id}:`, err);
+          }
+        })
+      );
+      setUnreadMessages(counts);
+    } catch (error) {
+      console.error('Error loading unread message counts for projects:', error);
+    }
+  };
 
   // Socket setup for real-time task updates/removals
   useEffect(() => {
@@ -341,6 +447,11 @@ const EmployeeProfile = () => {
 
   // Handle opening chat for a specific task's project
   const handleOpenTaskChat = (task) => {
+    if (!user) {
+      alert('User not authenticated. Please refresh the page.');
+      return;
+    }
+
     if (!task.project) {
       alert('This task is not associated with a project');
       return;
@@ -369,9 +480,27 @@ const EmployeeProfile = () => {
     if (projectData.teamMembers.length === 0 && Array.isArray(task.assignedTo)) {
       projectData.teamMembers = [...task.assignedTo];
     }
+
+    // Ensure current user is in team members for access control
+    const userInTeam = projectData.teamMembers.some(member => {
+      const memberId = typeof member === 'string' ? member : (member._id || member.employeeId);
+      return memberId === user._id || memberId === user.employeeId;
+    });
+
+    if (!userInTeam) {
+      // Add current user to team members if not present (they're assigned to the task)
+      projectData.teamMembers.push(user);
+    }
     
     setSelectedTaskForChat(projectData);
     setShowTaskChat(true);
+
+    // Clear unread count for this project
+    const projectId = projectData._id;
+    setUnreadMessages(prev => ({
+      ...prev,
+      [projectId]: 0
+    }));
   };
 
   return (
@@ -922,6 +1051,15 @@ const EmployeeProfile = () => {
                           >
                             <FaComments style={{ marginRight: '8px' }} />
                             Open Project Chat
+                            {(() => {
+                              const projectId = typeof task.project === 'object' 
+                                ? (task.project._id || task.project.id) 
+                                : task.project;
+                              const unreadCount = unreadMessages[projectId];
+                              return unreadCount > 0 ? (
+                                <span className="emp-unread-badge">{unreadCount}</span>
+                              ) : null;
+                            })()}
                           </button>
                         </div>
                       )}
@@ -936,16 +1074,107 @@ const EmployeeProfile = () => {
             </div>
           </div>
         )}
+
+        {/* Projects Section */}
+        {activeSection === 'projects' && (
+          <div className="emp-content-section">
+            <div className="emp-section-header">
+              <div className="emp-section-title-wrapper">
+                <h2 className="emp-section-title">My Projects</h2>
+                <p className="emp-section-description">Projects you're currently working on</p>
+              </div>
+            </div>
+
+            <div className="emp-projects-container">
+              {projectsLoading ? (
+                <div className="emp-loading-spinner">
+                  <p>Loading projects...</p>
+                </div>
+              ) : myProjects.length > 0 ? (
+                <div className="emp-projects-grid">
+                  {myProjects.map((project) => (
+                    <div key={project._id} className="emp-project-card">
+                      <div className="emp-project-header">
+                        <h3 className="emp-project-name">{project.name}</h3>
+                        <span className={`emp-project-status ${project.status || 'active'}`}>
+                          {project.status || 'Active'}
+                        </span>
+                      </div>
+                      
+                      <div className="emp-project-details">
+                        <div className="emp-project-meta">
+                          <div className="emp-meta-item">
+                            <span className="emp-meta-label">Client:</span>
+                            <span className="emp-meta-value">{project.client || 'Not specified'}</span>
+                          </div>
+                          <div className="emp-meta-item">
+                            <span className="emp-meta-label">Team Size:</span>
+                            <span className="emp-meta-value">{project.teamMembers?.length || 0} members</span>
+                          </div>
+                        </div>
+                        
+                        {project.description && (
+                          <p className="emp-project-description">{project.description}</p>
+                        )}
+                        
+                        {project.technologies && Array.isArray(project.technologies) && project.technologies.length > 0 && (
+                          <div className="emp-project-tech">
+                            <span className="emp-tech-label">Technologies:</span>
+                            <div className="emp-tech-tags">
+                              {project.technologies.map((tech, index) => (
+                                <span key={index} className="emp-tech-tag">{tech}</span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                      
+                      <div className="emp-project-actions">
+                        <button 
+                          className="emp-project-chat-btn"
+                          onClick={() => {
+                            setSelectedTaskForChat(project);
+                            setShowTaskChat(true);
+                            // Clear unread count
+                            setUnreadMessages(prev => ({ ...prev, [project._id]: 0 }));
+                          }}
+                          title="Open project team chat"
+                        >
+                          <FaComments style={{ marginRight: '8px' }} />
+                          Team Chat
+                          {unreadMessages[project._id] > 0 && (
+                            <span className="emp-unread-badge">{unreadMessages[project._id]}</span>
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="emp-no-projects">
+                  <p>You are not assigned to any projects yet</p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Task Chat Modal */}
       {showTaskChat && selectedTaskForChat && user && (
         <ProjectChat 
           project={selectedTaskForChat}
-          currentUser={user}
+          currentUser={{
+            ...user,
+            photo: profileImg || user.photo
+          }}
           onClose={() => {
             setShowTaskChat(false);
             setSelectedTaskForChat(null);
+          }}
+          onMessagesRead={(projectId) => {
+            // Refresh unread counts when messages are read
+            loadUnreadMessageCounts();
           }}
         />
       )}

@@ -1,12 +1,13 @@
 import React from 'react';
-import { FaUser, FaCalendarAlt, FaTasks } from 'react-icons/fa';
+import { FaUser, FaCalendarAlt, FaTasks, FaProjectDiagram } from 'react-icons/fa';
 import './Sidebar_Employee.css';
 
 const Sidebar = ({ activeSection, setActiveSection }) => {
   const menuItems = [
     { id: 'profile', label: 'My Profile', icon: FaUser },
-    { id: 'leaves', label: 'My Leaves', icon: FaCalendarAlt },
-    { id: 'tasks', label: 'My Tasks', icon: FaTasks }
+    { id: 'projects', label: 'My Projects', icon: FaProjectDiagram },
+    { id: 'tasks', label: 'My Tasks', icon: FaTasks },
+    { id: 'leaves', label: 'My Leaves', icon: FaCalendarAlt }
   ];
 
   return (
