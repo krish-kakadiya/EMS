@@ -162,18 +162,21 @@ const ProjectChat = ({ project, currentUser, onClose, onMessagesRead }) => {
 
     // Connection events
     socket.on('connect', () => {
-      console.log('Connected to socket server');
+      console.log('🟢 Connected to socket server');
+      console.log('🟢 Socket ID:', socket.id);
       setIsConnected(true);
       
       // Join project room
-      socket.emit('join_project', {
+      const joinData = {
         projectId: project._id,
         userId: userId,
         userName: userName,
         userPhoto: currentUser.photo || 
                   (currentUser.profile && currentUser.profile.profilePicture) ||
                   generatePlaceholderImage(userName ? userName.charAt(0) : 'U')
-      });
+      };
+      console.log('🟢 JOINING PROJECT:', joinData);
+      socket.emit('join_project', joinData);
     });
 
     socket.on('disconnect', (reason) => {
@@ -190,8 +193,12 @@ const ProjectChat = ({ project, currentUser, onClose, onMessagesRead }) => {
     });
 
     socket.on('connect_error', (error) => {
-      console.error('Connection error:', error);
+      console.error('🔴 Connection error:', error);
       setIsConnected(false);
+    });
+
+    socket.on('error', (error) => {
+      console.error('🔴 Socket error:', error);
     });
 
     socket.on('reconnect', (attemptNumber) => {
@@ -232,6 +239,7 @@ const ProjectChat = ({ project, currentUser, onClose, onMessagesRead }) => {
     });
 
     socket.on('receive_message', (msg) => {
+      console.log('🔥 RECEIVED MESSAGE:', msg);
       const formattedMessage = {
         id: msg.id,
         senderId: msg.senderId,
@@ -242,7 +250,13 @@ const ProjectChat = ({ project, currentUser, onClose, onMessagesRead }) => {
         isCurrentUser: msg.senderId === userId,
         attachment: msg.attachment
       };
-      setMessages(prev => [...prev, formattedMessage]);
+      console.log('🔥 FORMATTED MESSAGE:', formattedMessage);
+      setMessages(prev => {
+        console.log('🔥 PREV MESSAGES:', prev.length);
+        const newMessages = [...prev, formattedMessage];
+        console.log('🔥 NEW MESSAGES:', newMessages.length);
+        return newMessages;
+      });
     });
 
     // Typing events
@@ -447,14 +461,19 @@ const ProjectChat = ({ project, currentUser, onClose, onMessagesRead }) => {
       }
 
       // Send message via socket
-      socketRef.current.emit('send_message', {
+      const messageData = {
         projectId: project._id,
         senderId: userId,
         senderName: userName,
         senderPhoto: userPhoto,
         message: newMessage.trim(),
         attachment: attachmentData
-      });
+      };
+      console.log('🚀 SENDING MESSAGE:', messageData);
+      console.log('🚀 SOCKET CONNECTED:', socketRef.current.connected);
+      console.log('🚀 SOCKET ID:', socketRef.current.id);
+      
+      socketRef.current.emit('send_message', messageData);
 
       // Clear input and file
       setNewMessage('');
