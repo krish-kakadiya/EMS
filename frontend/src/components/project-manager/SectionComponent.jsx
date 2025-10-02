@@ -3,35 +3,54 @@ import Dashboard from "../../pages/project-manager/Dashboard.jsx";
 import TaskManagement from "../../pages/project-manager/TaskManagement.jsx";
 import "./SectionComponent.css";
 import Navbar from "../Navbar.jsx";
+import { FaTachometerAlt, FaProjectDiagram, FaTasks } from 'react-icons/fa';
 
 const SectionComponent = () => {
   const [activePage, setActivePage] = useState("dashboard");
 
+  const sidebarItems = [
+    { 
+      icon: <FaTachometerAlt />, 
+      label: 'Dashboard', 
+      key: 'dashboard' 
+    },
+    { 
+      icon: <FaProjectDiagram />, 
+      label: 'My Projects', 
+      key: 'projects' 
+    },
+    { 
+      icon: <FaTasks />, 
+      label: 'Task Management', 
+      key: 'task' 
+    }
+  ];
+
   return (
     <div className="app-container">
-        <Navbar />
+      <Navbar />
+      
       {/* Sidebar */}
-      <div className="section-bar">
-        <button
-          className={`section-btn ${activePage === "dashboard" ? "active" : ""}`}
-          onClick={() => setActivePage("dashboard")}
-        >
-          📊 Dashboard
-        </button>
-        <button
-          className={`section-btn ${activePage === "task" ? "active" : ""}`}
-          onClick={() => setActivePage("task")}
-        >
-          ✅ Task Management
-        </button>
-        {/* Teams tab removed per latest requirement: inline team selection in project creation only */}
+      <div className="pm-sidebar">
+        <div className="sidebar-content">
+          {sidebarItems.map((item, i) => (
+            <div
+              key={i}
+              className={`sidebar-item ${item.key === activePage ? 'active' : ''}`}
+              onClick={() => setActivePage(item.key)}
+            >
+              <div className="sidebar-icon">{item.icon}</div>
+              <span>{item.label}</span>
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* Main Content */}
       <div className="content-area">
-  {activePage === "dashboard" && <Dashboard />}
-  {activePage === "task" && <TaskManagement />}
-  {/* Teams view removed: team selection occurs inside project creation modal */}
+        {activePage === "dashboard" && <Dashboard />}
+        {activePage === "projects" && <div className="coming-soon">My Projects - Coming Soon</div>}
+        {activePage === "task" && <TaskManagement />}
       </div>
     </div>
   );

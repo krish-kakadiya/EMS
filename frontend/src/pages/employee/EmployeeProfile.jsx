@@ -3,7 +3,7 @@ import { io } from 'socket.io-client';
 import Navbar from "../../components/Navbar";
 import Sidebar from "../../components/employee/Sidebar_Employee";
 import { useSelector, useDispatch } from "react-redux";
-import { FaEye, FaEyeSlash, FaUser, FaCamera, FaCalendarAlt, FaEdit, FaSave, FaTimes, FaCheck, FaFilter } from "react-icons/fa";
+import { FaEye, FaEyeSlash, FaUser, FaCamera, FaCalendarAlt, FaEdit, FaSave, FaTimes, FaCheck, FaFilter, FaComments } from "react-icons/fa";
 import {
   applyLeave,
   getMyLeaves,
@@ -12,6 +12,7 @@ import {
 import { getCurrentUser } from "../../redux/slices/authSlice";
 import api from "../../axios/api";
 import { fetchMyTasks, updateMyTaskStatus, deleteMyTask, leaveMyTask } from "../../redux/slices/employeeTasksSlice";
+import ProjectChat from "../project-manager/ProjectChat.jsx"; // Import the chat component
 import "./EmployeeProfile.css";
 
 const EmployeeProfile = () => {
@@ -30,6 +31,11 @@ const EmployeeProfile = () => {
   const [taskFilter, setTaskFilter] = useState('all');
   const [selectedGender, setSelectedGender] = useState('');
   const [selectedMaritalStatus, setSelectedMaritalStatus] = useState('');
+  
+  // Chat state
+  const [showTaskChat, setShowTaskChat] = useState(false);
+  const [selectedTaskForChat, setSelectedTaskForChat] = useState(null);
+  
   const [personalDetails, setPersonalDetails] = useState({
     dob: '',
     phone: '',
@@ -44,8 +50,6 @@ const EmployeeProfile = () => {
     fromDate: "",
     toDate: "",
   });
-
-  // tasks will come from redux slice employeeTasks
 
   const { user } = useSelector((state) => state.auth);
   const { tasks: myTasks, loading: myTasksLoading } = useSelector((state) => state.employeeTasks);
@@ -62,12 +66,10 @@ const EmployeeProfile = () => {
   const handleImageChange = (e) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
-      // Basic validation (optional enhancement)
       if (!file.type.startsWith('image/')) {
         alert('Please select an image file');
         return;
       }
-      // 2MB size limit example
       if (file.size > 2 * 1024 * 1024) {
         alert('Image size should be under 2MB');
         return;
@@ -86,7 +88,6 @@ const EmployeeProfile = () => {
       fd.append('photo', selectedImageFile);
       const res = await api.post('/profile/me/photo', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
       if (res.data) {
-        // Prefer absolute URL returned by backend, else construct using path
         const finalUrl = res.data.url
           || (res.data.path ? (res.data.path.startsWith('http') ? res.data.path : `${API_ORIGIN}${res.data.path.startsWith('/') ? '' : '/'}${res.data.path}`) : null);
         if (finalUrl) setProfileImg(finalUrl);
@@ -130,7 +131,6 @@ const EmployeeProfile = () => {
     });
   };
 
-  // ---------------- Personal Details Helpers ----------------
   const handlePersonalChange = (e) => {
     const { name, value } = e.target;
     setPersonalDetails(prev => ({ ...prev, [name]: value }));
@@ -170,7 +170,6 @@ const EmployeeProfile = () => {
 
   useEffect(() => {
     loadExistingProfile();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
   const handleUpdateProfile = async () => {
@@ -184,7 +183,6 @@ const EmployeeProfile = () => {
     }
     setUpdatingProfile(true);
     try {
-      // Placeholder API call; adjust endpoint when backend route exists
       const payload = {
         gender: selectedGender,
         maritalStatus: selectedMaritalStatus,
@@ -195,7 +193,6 @@ const EmployeeProfile = () => {
       };
       const res = await api.put('/profile/me', payload);
       alert('Profile updated successfully');
-      // Optionally refresh user
       dispatch(getCurrentUser());
     } catch (e) {
       alert(e.response?.data?.message || e.message);
@@ -308,12 +305,11 @@ const EmployeeProfile = () => {
 
   // Socket setup for real-time task updates/removals
   useEffect(() => {
-    if (!user?._id) return; // wait for user
+    if (!user?._id) return;
     if (!socketRef.current) {
       try {
         const origin = (api.defaults.baseURL || 'http://localhost:3000/api').replace(/\/api\/?$/,'');
         socketRef.current = io(origin, { withCredentials: true });
-        // Join user room for potential targeted events later
         socketRef.current.emit('joinUser', user._id);
       } catch (e) { console.warn('Socket init failed (employee)', e.message); }
     }
@@ -322,23 +318,17 @@ const EmployeeProfile = () => {
 
     const handleTaskUpdated = ({ task }) => {
       if (!task || !task._id) return;
-      // If user no longer in assignedTo, remove from local list
       const stillAssigned = Array.isArray(task.assignedTo) && task.assignedTo.some(p => (p._id || p) === user._id);
       if (!stillAssigned) {
-        // optimistic removal without refetch
-        // dispatch locally by filtering state via a mini action (reuse delete semantics)
-        // We'll dispatch a fake deleteMyTask fulfilled style using fetchMyTasks after slight delay optional
         dispatch(fetchMyTasks());
         return;
       }
-      // If still assigned and tasks section active, refresh list to get updated assignees/messages
       if (activeSection === 'tasks') {
         dispatch(fetchMyTasks());
       }
     };
     const handleTaskDeleted = ({ taskId }) => {
       if (!taskId) return;
-      // Refresh to drop it if it belonged to user
       dispatch(fetchMyTasks());
     };
     sock.on('taskUpdated', handleTaskUpdated);
@@ -348,6 +338,41 @@ const EmployeeProfile = () => {
       sock.off('taskDeleted', handleTaskDeleted);
     };
   }, [user, dispatch, activeSection]);
+
+  // Handle opening chat for a specific task's project
+  const handleOpenTaskChat = (task) => {
+    if (!task.project) {
+      alert('This task is not associated with a project');
+      return;
+    }
+    
+    // Create a new mutable project object
+    let projectData;
+    
+    if (typeof task.project === 'object') {
+      // Clone the project object to make it mutable
+      projectData = {
+        _id: task.project._id || task.project.id,
+        name: task.project.name || 'Project Chat',
+        teamMembers: Array.isArray(task.project.teamMembers) ? [...task.project.teamMembers] : []
+      };
+    } else {
+      // If project is just an ID string
+      projectData = {
+        _id: task.project,
+        name: task.name ? `${task.name} - Project Chat` : 'Project Chat',
+        teamMembers: []
+      };
+    }
+    
+    // Add team members from task assignees if project has no team members
+    if (projectData.teamMembers.length === 0 && Array.isArray(task.assignedTo)) {
+      projectData.teamMembers = [...task.assignedTo];
+    }
+    
+    setSelectedTaskForChat(projectData);
+    setShowTaskChat(true);
+  };
 
   return (
     <div className="emp-profile-wrapper">
@@ -406,7 +431,6 @@ const EmployeeProfile = () => {
         {/* Profile Section */}
         {activeSection === 'profile' && (
           <div className="emp-content-section">
-            {/* Enhanced Profile Header */}
             <div className="emp-profile-header">
               <div className="emp-profile-photo-section">
                 <div className="emp-photo-wrapper">
@@ -855,7 +879,6 @@ const EmployeeProfile = () => {
                             if (!assigned) return null;
                             const assigneeCount = Array.isArray(task.assignedTo) ? task.assignedTo.length : 0;
                             if (assigneeCount === 1) {
-                              // Show Delete (sole owner)
                               return (
                                 <button
                                   className="emp-status-btn emp-delete-inline"
@@ -871,7 +894,6 @@ const EmployeeProfile = () => {
                                 </button>
                               );
                             }
-                            // Multiple assignees: allow leaving the task
                             return (
                               <button
                                 className="emp-status-btn emp-leave-inline"
@@ -889,6 +911,20 @@ const EmployeeProfile = () => {
                           })()}
                         </div>
                       </div>
+
+                      {/* Live Chat Button */}
+                      {task.project && (
+                        <div className="emp-task-chat-section">
+                          <button 
+                            className="emp-task-chat-btn"
+                            onClick={() => handleOpenTaskChat(task)}
+                            title="Open live chat with project team"
+                          >
+                            <FaComments style={{ marginRight: '8px' }} />
+                            Open Project Chat
+                          </button>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -901,6 +937,18 @@ const EmployeeProfile = () => {
           </div>
         )}
       </div>
+
+      {/* Task Chat Modal */}
+      {showTaskChat && selectedTaskForChat && user && (
+        <ProjectChat 
+          project={selectedTaskForChat}
+          currentUser={user}
+          onClose={() => {
+            setShowTaskChat(false);
+            setSelectedTaskForChat(null);
+          }}
+        />
+      )}
     </div>
   );
 };
