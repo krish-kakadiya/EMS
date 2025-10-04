@@ -1,11 +1,12 @@
 import React, { useEffect } from "react";
-import { Navigate } from "react-router-dom";
+import { Navigate, useLocation } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { getCurrentUser } from "../redux/slices/authSlice";
 
 const ProtectedRoute = ({ children, hrOnly = false, pmOnly = false }) => {
   const dispatch = useDispatch();
   const { user, loading } = useSelector((state) => state.auth);
+  const location = useLocation();
 
   useEffect(() => {
     if (!user) {
@@ -16,6 +17,11 @@ const ProtectedRoute = ({ children, hrOnly = false, pmOnly = false }) => {
   if (loading) return <div>Loading...</div>;
 
   if (!user) return <Navigate to="/login" replace />;
+
+  // Enforce forced password reset gate
+  if (user.passwordResetRequired && location.pathname !== '/force-reset') {
+    return <Navigate to="/force-reset" replace />;
+  }
 
   // HR-only → block if not HR
   if (hrOnly && user.role !== "hr") {

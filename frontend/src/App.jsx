@@ -12,6 +12,7 @@ import LeavePage from "./pages/LeavePage";
 import EmployeeProfile from "./pages/employee/EmployeeProfile";
 import SalaryManagement from "./pages/SalaryManagement";
 import SectionComponent from "./components/project-manager/SectionComponent.jsx";
+import ForceResetPassword from "./pages/auth/ForceResetPassword.jsx";
 
 // Components
 import Layout from "./components/Layout";
@@ -96,6 +97,16 @@ function App() {
           element={
             <ProtectedRoute>
               <EmployeeProfile />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Forced password reset page */}
+        <Route
+          path="/force-reset"
+          element={
+            <ProtectedRoute>
+              <ForceResetPassword />
             </ProtectedRoute>
           }
         />
