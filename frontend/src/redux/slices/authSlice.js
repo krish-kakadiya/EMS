@@ -53,6 +53,19 @@ export const changePassword = createAsyncThunk(
   }
 );
 
+// 🔹 Reset Password (forced after OTP)
+export const resetPassword = createAsyncThunk(
+  'auth/resetPassword',
+  async (payload, { rejectWithValue }) => {
+    try {
+      const res = await api.post('/auth/reset-password', payload);
+      return res.data; // { success, message }
+    } catch (error) {
+      return rejectWithValue(error.response?.data || { message: 'Reset password failed' });
+    }
+  }
+);
+
 const authSlice = createSlice({
   name: "auth",
   initialState: {
@@ -61,13 +74,20 @@ const authSlice = createSlice({
     error: null,
     changingPassword: false,
     changePasswordMessage: null,
+    resettingPassword: false,
+    resetPasswordMessage: null,
   },
   reducers: {
     clearChangePasswordState: (state) => {
       state.changingPassword = false;
       state.changePasswordMessage = null;
       state.error = null;
-    }
+    },
+    clearResetPasswordState: (state) => {
+      state.resettingPassword = false;
+      state.resetPasswordMessage = null;
+      state.error = null;
+    },
   },
   extraReducers: (builder) => {
     // login
@@ -119,8 +139,28 @@ const authSlice = createSlice({
         state.changingPassword = false;
         state.error = action.payload?.message || 'Change password failed';
       });
+
+    // resetPassword
+    builder
+      .addCase(resetPassword.pending, (state) => {
+        state.resettingPassword = true;
+        state.resetPasswordMessage = null;
+        state.error = null;
+      })
+      .addCase(resetPassword.fulfilled, (state, action) => {
+        state.resettingPassword = false;
+        state.resetPasswordMessage = action.payload.message || 'Password reset successful';
+        // Clear flag on user if present
+        if (state.user) {
+          state.user.passwordResetRequired = false;
+        }
+      })
+      .addCase(resetPassword.rejected, (state, action) => {
+        state.resettingPassword = false;
+        state.error = action.payload?.message || 'Reset password failed';
+      });
   },
 });
 
-export const { clearChangePasswordState } = authSlice.actions;
+export const { clearChangePasswordState, clearResetPasswordState } = authSlice.actions;
 export default authSlice.reducer;
