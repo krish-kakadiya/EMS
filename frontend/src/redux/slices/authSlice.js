@@ -40,14 +40,35 @@ export const logoutUser = createAsyncThunk(
   }
 );
 
+// 🔹 Change Password
+export const changePassword = createAsyncThunk(
+  'auth/changePassword',
+  async (payload, { rejectWithValue }) => {
+    try {
+      const res = await api.post('/auth/change-password', payload);
+      return res.data; // { success, message }
+    } catch (error) {
+      return rejectWithValue(error.response?.data || { message: 'Change password failed' });
+    }
+  }
+);
+
 const authSlice = createSlice({
   name: "auth",
   initialState: {
     user: null,
     loading: false,
     error: null,
+    changingPassword: false,
+    changePasswordMessage: null,
   },
-  reducers: {},
+  reducers: {
+    clearChangePasswordState: (state) => {
+      state.changingPassword = false;
+      state.changePasswordMessage = null;
+      state.error = null;
+    }
+  },
   extraReducers: (builder) => {
     // login
     builder
@@ -82,7 +103,24 @@ const authSlice = createSlice({
     builder.addCase(logoutUser.fulfilled, (state) => {
       state.user = null;
     });
+
+    // changePassword
+    builder
+      .addCase(changePassword.pending, (state) => {
+        state.changingPassword = true;
+        state.changePasswordMessage = null;
+        state.error = null;
+      })
+      .addCase(changePassword.fulfilled, (state, action) => {
+        state.changingPassword = false;
+        state.changePasswordMessage = action.payload.message || 'Password changed';
+      })
+      .addCase(changePassword.rejected, (state, action) => {
+        state.changingPassword = false;
+        state.error = action.payload?.message || 'Change password failed';
+      });
   },
 });
 
+export const { clearChangePasswordState } = authSlice.actions;
 export default authSlice.reducer;
