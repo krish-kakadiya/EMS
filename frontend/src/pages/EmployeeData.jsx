@@ -218,9 +218,24 @@ const EmployeePage = () => {
                   <span className="employee-id">{employee.employeeId}</span>
                 </td>
                 <td>
-                  <div className="profile-avatar">
-                    <FaUser />
-                  </div>
+                  <button
+                    className="profile-avatar"
+                    type="button"
+                    title="View Profile"
+                    onClick={() => navigate(`/employees/${employee._id}`)}
+                    style={{cursor:'pointer'}}
+                  >
+                    {employee.profilePicture ? (
+                      <img
+                        src={employee.profilePicture}
+                        alt={employee.name}
+                        style={{width:'100%',height:'100%',borderRadius:'50%',objectFit:'cover'}}
+                        onError={(e)=>{e.currentTarget.src='https://avatar.iran.liara.run/public/46'}}
+                      />
+                    ) : (
+                      <FaUser />
+                    )}
+                  </button>
                 </td>
                 <td>
                   <span className="employee-fullname">{employee.name}</span>

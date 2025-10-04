@@ -13,6 +13,7 @@ import EmployeeProfile from "./pages/employee/EmployeeProfile";
 import SalaryManagement from "./pages/SalaryManagement";
 import SectionComponent from "./components/project-manager/SectionComponent.jsx";
 import ForceResetPassword from "./pages/auth/ForceResetPassword.jsx";
+import EmployeeDetail from "./pages/EmployeeDetail.jsx";
 
 // Components
 import Layout from "./components/Layout";
@@ -53,6 +54,17 @@ function App() {
             <ProtectedRoute hrOnly={true}>
               <Layout activePage="employees">
                 <EmployeePage />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/employees/:id"
+          element={
+            <ProtectedRoute hrOnly={true}>
+              <Layout activePage="employees">
+                <EmployeeDetail />
               </Layout>
             </ProtectedRoute>
           }
