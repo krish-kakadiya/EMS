@@ -266,31 +266,7 @@
   font-family: inherit;
 }
 
-/* Password Field */
-.emp-password-field {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.emp-password-field .emp-form-input {
-  flex: 1;
-}
-
-.emp-eye-toggle {
-  padding: 12px;
-  border: 2px solid #e5e7eb;
-  border-radius: 10px;
-  background: white;
-  color: #6b7280;
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-
-.emp-eye-toggle:hover {
-  background: #f9fafb;
-  border-color: #d1d5db;
-}
+/* (Removed unused password input & eye toggle styles) */
 
 .emp-change-password-btn {
   padding: 12px 16px;
@@ -301,6 +277,14 @@
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
+}
+
+/* Compact size modifier */
+.emp-change-password-btn.emp-small {
+  padding: 6px 12px;
+  font-size: 0.75rem;
+  border-radius: 8px;
+  font-weight: 600;
 }
 
 .emp-change-password-btn:hover {

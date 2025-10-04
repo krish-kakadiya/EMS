@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useRef } from "react";
 import { io } from 'socket.io-client';
 import Navbar from "../../components/Navbar";
+import ChangePasswordModal from "../../components/employee/ChangePasswordModal";
+import "../../components/employee/ChangePasswordModal.css";
 import Sidebar from "../../components/employee/Sidebar_Employee";
 import { useSelector, useDispatch } from "react-redux";
-import { FaEye, FaEyeSlash, FaUser, FaCamera, FaCalendarAlt, FaEdit, FaSave, FaTimes, FaCheck, FaFilter, FaComments } from "react-icons/fa";
+import { FaUser, FaCamera, FaCalendarAlt, FaEdit, FaSave, FaTimes, FaCheck, FaFilter, FaComments } from "react-icons/fa";
 import {
   applyLeave,
   getMyLeaves,
@@ -21,7 +23,7 @@ const EmployeeProfile = () => {
   // Remove trailing /api (with or without slash) from the configured base URL
   const API_ORIGIN = API_BASE.replace(/\/?api\/?$/i, '');
   const [profileImg, setProfileImg] = useState(null);
-  const [showPassword, setShowPassword] = useState(false);
+  // Password no longer toggle-visible; we intentionally do not store or reveal it.
   const [activeSection, setActiveSection] = useState('profile');
   const [tempProfileImg, setTempProfileImg] = useState(null);
   const [showStatusPopup, setShowStatusPopup] = useState(false);
@@ -31,6 +33,7 @@ const EmployeeProfile = () => {
   const [taskFilter, setTaskFilter] = useState('all');
   const [selectedGender, setSelectedGender] = useState('');
   const [selectedMaritalStatus, setSelectedMaritalStatus] = useState('');
+  const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
   
   // Chat state
   const [showTaskChat, setShowTaskChat] = useState(false);
@@ -638,22 +641,16 @@ const EmployeeProfile = () => {
                 </div>
                 <div className="emp-form-group">
                   <label className="emp-form-label">Password</label>
-                  <div className="emp-password-field">
-                    <input
-                      type={showPassword ? "text" : "password"}
-                      value="••••••••"
-                      readOnly
-                      className="emp-form-input"
-                    />
+                  <div style={{display:'flex',justifyContent:'flex-start'}}>
                     <button
                       type="button"
-                      className="emp-eye-toggle"
-                      onClick={() => setShowPassword(!showPassword)}
+                      className="emp-change-password-btn emp-small"
+                      onClick={() => setShowChangePasswordModal(true)}
                     >
-                      {showPassword ? <FaEye /> : <FaEyeSlash />}
+                      Change Password
                     </button>
-                    <button className="emp-change-password-btn">Change</button>
                   </div>
+                  <small style={{display:'block',marginTop:'6px',color:'#64748b',fontSize:'12px'}}>You can change your password anytime.</small>
                 </div>
               </div>
             </div>
@@ -1179,6 +1176,9 @@ const EmployeeProfile = () => {
             loadUnreadMessageCounts();
           }}
         />
+      )}
+      {showChangePasswordModal && (
+        <ChangePasswordModal onClose={() => setShowChangePasswordModal(false)} />
       )}
     </div>
   );
