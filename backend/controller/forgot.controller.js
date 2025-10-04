@@ -158,6 +158,16 @@ export const verifyResetCode = async (req, res) => {
 
     console.log("✅ OTP verified successfully");
 
+    const token = user.generateAuthToken();
+    console.log("🔑 Generated JWT:", token);
+    
+    res.cookie("token", token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      maxAge: 24 * 60 * 60 * 1000, // 1 day
+    });
+    
     return res.status(200).json({
       success: true,
       message: "OTP verified",
