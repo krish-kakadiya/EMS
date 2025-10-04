@@ -4,6 +4,48 @@
   import Profile from "../model/profile.model.js";
 import ExcelJS from "exceljs";
 
+// Get a single employee details (HR only)
+const getEmployeeDetails = async (req, res) => {
+  try {
+    const { id } = req.params;
+    if(!id){
+      return res.status(400).json({ success:false, message:'Employee id required' });
+    }
+
+    const user = await User.findById(id).select('-password').lean();
+    if(!user){
+      return res.status(404).json({ success:false, message:'Employee not found' });
+    }
+
+    const [salary, profile] = await Promise.all([
+      Salary.findOne({ user: id }).lean(),
+      Profile.findOne({ user: id }).lean()
+    ]);
+
+    return res.status(200).json({
+      success:true,
+      employee:{
+        ...user,
+        salary: salary ? { basic: salary.basic } : null,
+        profile: profile ? {
+          gender: profile.gender || null,
+            maritalStatus: profile.maritalStatus || null,
+            dob: profile.dob || null,
+            phone: profile.phone || null,
+            joiningDate: profile.joiningDate || null,
+            address: profile.address || null,
+            profilePicture: profile.profilePicture || null,
+            designation: profile.designation || null,
+            _id: profile._id
+        } : null
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching employee details', error);
+    return res.status(500).json({ success:false, message:'Internal server error while fetching employee details' });
+  }
+}
+
 
   const createEmployee = async (req, res) => {
     try {
@@ -106,6 +148,15 @@ import ExcelJS from "exceljs";
         },
       },
       {
+        $lookup: {
+          from: 'profiles',
+          localField: '_id',
+          foreignField: 'user',
+          as: 'profile'
+        }
+      },
+      { $unwind: { path: '$profile', preserveNullAndEmptyArrays: true } },
+      {
         $unwind: {
           path: "$salary",
           preserveNullAndEmptyArrays: true, // keep employees even if no salary
@@ -120,6 +171,7 @@ import ExcelJS from "exceljs";
           role: 1,
           department: 1,
           "salary.basic": 1, // only return basic salary field
+          profilePicture: '$profile.profilePicture'
         },
       },
     ]);
@@ -354,4 +406,4 @@ const listSimpleEmployees = async (req, res) => {
   }
 };
 
-  export { createEmployee, getAllEmployees, deleteEmployee, monthlyPay, listSimpleEmployees };
+  export { createEmployee, getAllEmployees, deleteEmployee, monthlyPay, listSimpleEmployees, getEmployeeDetails };
