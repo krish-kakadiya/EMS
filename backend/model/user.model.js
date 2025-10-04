@@ -42,6 +42,16 @@ const userSchema = new mongoose.Schema({
     ref: "Profile",
     default: null,
   },
+
+  resetCode: {
+    type: String,
+    default: undefined,
+  },
+  resetCodeExpiry: {
+    type: Date,
+    default: undefined,
+  },
+  
 }, { timestamps: true, versionKey: false });
 
 userSchema.pre("save", async function (next) {

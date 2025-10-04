@@ -11,6 +11,12 @@ const port = process.env.PORT || 3000; // Align with frontend axios baseURL
 if (mongoose.models.Message) {
     delete mongoose.models.Message;
 }
+dotenv.config();
+
+// Add this to verify .env is loaded
+console.log('🔐 Environment Check:');
+console.log('EMAIL_USER:', process.env.EMAIL_USER ? '✅ Loaded' : '❌ Not Loaded');
+console.log('EMAIL_PASSWORD:', process.env.EMAIL_PASSWORD ? '✅ Loaded' : '❌ Not Loaded');
 
 // Message Schema for Chat
 const messageSchema = new mongoose.Schema({
