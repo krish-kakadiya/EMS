@@ -2,6 +2,7 @@ import User from "../model/user.model.js";
 import Counter from "../model/counter.model.js";
 import Salary from "../model/salary.model.js";
 import Profile from "../model/profile.model.js";
+import bcrypt from "bcrypt";
 
 // const createAdmin = async (req, res) => {
 //   try {
@@ -187,3 +188,64 @@ export const logout =  (req, res) => {
     message: 'Logged out successfully',
   });
 }
+
+// Change password for logged-in user
+export const changePassword = async (req, res) => {
+  try {
+    const { currentPassword, newPassword, confirmPassword } = req.body || {};
+
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      return res.status(400).json({ success: false, message: 'All fields (currentPassword, newPassword, confirmPassword) are required' });
+    }
+
+    if (newPassword !== confirmPassword) {
+      return res.status(400).json({ success: false, message: 'New password and confirm password do not match' });
+    }
+
+    if (newPassword.length < 8) {
+      return res.status(400).json({ success: false, message: 'Password must be at least 8 characters long' });
+    }
+
+    // Optional strength checks (at least 1 upper, 1 lower, 1 number, 1 special)
+    const strengthRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
+    if (!strengthRegex.test(newPassword)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Password must include upper, lower, number, and special character'
+      });
+    }
+
+    const user = await User.findById(req.user.id).select('+password');
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    const isMatch = await user.matchPassword(currentPassword);
+    if (!isMatch) {
+      return res.status(400).json({ success: false, message: 'Current password is incorrect' });
+    }
+
+    // Prevent reusing same password hash
+    const isSame = await bcrypt.compare(newPassword, user.password);
+    if (isSame) {
+      return res.status(400).json({ success: false, message: 'New password must be different from current password' });
+    }
+
+    user.password = newPassword; // will be hashed by pre-save hook
+    await user.save();
+
+    // (Optional) Invalidate existing session by regenerating token
+    const newToken = user.generateAuthToken();
+    res.cookie('token', newToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 24 * 60 * 60 * 1000,
+    });
+
+    return res.json({ success: true, message: 'Password changed successfully' });
+  } catch (error) {
+    console.error('Error changing password:', error);
+    return res.status(500).json({ success: false, message: 'Server error' });
+  }
+};

@@ -1,5 +1,5 @@
 import express from "express";
-import { login, logout, me } from "../controller/auth.controller.js";
+import { login, logout, me, changePassword } from "../controller/auth.controller.js";
 import { protectedRoutes } from "../middleware/auth.middleware.js";
 import { sendResetCode, verifyResetCode } from '../controller/forgot.controller.js';
 
@@ -12,5 +12,6 @@ authRouter.get('/me', protectedRoutes, me);
 authRouter.post('/logout',logout);
 authRouter.post('/send-reset-code', sendResetCode);
 authRouter.post('/verify-reset-code', verifyResetCode);
+authRouter.post('/change-password', protectedRoutes, changePassword);
 
 export default authRouter;
