@@ -249,3 +249,60 @@ export const changePassword = async (req, res) => {
     return res.status(500).json({ success: false, message: 'Server error' });
   }
 };
+
+// Complete forced password reset after OTP flow
+export const resetPassword = async (req, res) => {
+  try {
+    const { newPassword, confirmPassword } = req.body || {};
+
+    if (!newPassword || !confirmPassword) {
+      return res.status(400).json({ success: false, message: 'Both newPassword and confirmPassword are required' });
+    }
+
+    if (newPassword !== confirmPassword) {
+      return res.status(400).json({ success: false, message: 'Passwords do not match' });
+    }
+
+    if (newPassword.length < 8) {
+      return res.status(400).json({ success: false, message: 'Password must be at least 8 characters long' });
+    }
+
+    const strengthRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
+    if (!strengthRegex.test(newPassword)) {
+      return res.status(400).json({ success: false, message: 'Password must include upper, lower, number, and special character' });
+    }
+
+    const user = await User.findById(req.user.id).select('+password');
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    if (!user.passwordResetRequired) {
+      return res.status(400).json({ success: false, message: 'Password reset is not required' });
+    }
+
+    // Prevent reusing same password hash
+    const isSame = await bcrypt.compare(newPassword, user.password);
+    if (isSame) {
+      return res.status(400).json({ success: false, message: 'New password must be different from previous password' });
+    }
+
+    user.password = newPassword; // will be hashed by pre-save hook
+    user.passwordResetRequired = false;
+    await user.save();
+
+    // Issue fresh token
+    const token = user.generateAuthToken();
+    res.cookie('token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 24 * 60 * 60 * 1000,
+    });
+
+    return res.json({ success: true, message: 'Password reset successful. You may continue.' });
+  } catch (error) {
+    console.error('Error resetting password:', error);
+    return res.status(500).json({ success: false, message: 'Server error' });
+  }
+};

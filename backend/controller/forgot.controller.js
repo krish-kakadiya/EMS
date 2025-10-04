@@ -151,26 +151,26 @@ export const verifyResetCode = async (req, res) => {
       });
     }
 
-    // Clear OTP
+    // Clear OTP but mark that password must be reset before full access
     user.resetCode = undefined;
     user.resetCodeExpiry = undefined;
+    user.passwordResetRequired = true;
     await user.save();
 
-    console.log("✅ OTP verified successfully");
+    console.log("✅ OTP verified successfully; password reset required before normal access");
 
+    // Issue auth token so user can call reset-password endpoint only; frontend will redirect away from protected pages until reset
     const token = user.generateAuthToken();
-    console.log("🔑 Generated JWT:", token);
-    
     res.cookie("token", token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "strict",
-      maxAge: 24 * 60 * 60 * 1000, // 1 day
+      maxAge: 24 * 60 * 60 * 1000,
     });
-    
+
     return res.status(200).json({
       success: true,
-      message: "OTP verified",
+      message: "OTP verified. Please set a new password to continue.",
       user: {
         _id: user._id,
         name: user.name,
@@ -178,6 +178,7 @@ export const verifyResetCode = async (req, res) => {
         role: user.role,
         employeeId: user.employeeId,
         department: user.department,
+        passwordResetRequired: true,
       },
     });
   } catch (error) {

@@ -51,6 +51,11 @@ const userSchema = new mongoose.Schema({
     type: Date,
     default: undefined,
   },
+  // When true, user must set a new password before accessing normal protected pages
+  passwordResetRequired: {
+    type: Boolean,
+    default: false,
+  },
   
 }, { timestamps: true, versionKey: false });
 
