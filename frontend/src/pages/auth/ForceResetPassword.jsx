@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { resetPassword, getCurrentUser, clearResetPasswordState } from '../../redux/slices/authSlice';
 import { useNavigate } from 'react-router-dom';
+import {FaEye , FaEyeSlash} from "react-icons/fa";
 import './ForceResetPassword.css';
 
 const ForceResetPassword = () => {
@@ -85,7 +86,7 @@ const ForceResetPassword = () => {
             className="force-reset-input"
             type={showNew ? 'text' : 'password'}
             value={newPassword}
-            onChange={e=>setNewPassword(e.target.value)}
+            onChange={(e) => setNewPassword(e.target.value)}
             placeholder="Enter strong password"
             autoComplete="new-password"
           />
@@ -93,9 +94,9 @@ const ForceResetPassword = () => {
             type="button"
             aria-label={showNew ? 'Hide password' : 'Show password'}
             className="fr-eye-btn"
-            onClick={() => setShowNew(p=>!p)}
+            onClick={() => setShowNew(p => !p)}
           >
-            {showNew ? '🙈' : '👁️'}
+            {showNew ?  <FaEyeSlash /> : <FaEye />}
           </button>
         </div>
         {newPassword && (
@@ -112,7 +113,7 @@ const ForceResetPassword = () => {
             className="force-reset-input"
             type={showConfirm ? 'text' : 'password'}
             value={confirmPassword}
-            onChange={e=>setConfirmPassword(e.target.value)}
+            onChange={(e) => setConfirmPassword(e.target.value)}
             placeholder="Re-enter password"
             autoComplete="new-password"
           />
@@ -120,9 +121,9 @@ const ForceResetPassword = () => {
             type="button"
             aria-label={showConfirm ? 'Hide confirm password' : 'Show confirm password'}
             className="fr-eye-btn"
-            onClick={() => setShowConfirm(p=>!p)}
+            onClick={() => setShowConfirm(p => !p)}
           >
-            {showConfirm ? '🙈' : '👁️'}
+            {showConfirm ? <FaEyeSlash /> : <FaEye />}
           </button>
         </div>
 
@@ -134,7 +135,5 @@ const ForceResetPassword = () => {
     </div>
   );
 };
-
-// All styles moved to ForceResetPassword.css
 
 export default ForceResetPassword;

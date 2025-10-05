@@ -115,7 +115,7 @@
   background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
 }
 
-.leave-table th {
+.leave-table thead th {
   padding: 16px 24px;
   text-align: left;
   font-weight: 600;
