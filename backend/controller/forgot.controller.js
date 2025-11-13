@@ -163,8 +163,9 @@ export const verifyResetCode = async (req, res) => {
     const token = user.generateAuthToken();
     res.cookie("token", token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
+      secure: true,
+      sameSite: "None",
+      path: "/",
       maxAge: 24 * 60 * 60 * 1000,
     });
 
