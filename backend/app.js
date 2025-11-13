@@ -30,7 +30,7 @@ app.use(helmet({
 app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
 
 // Dynamic CORS origin allowlist via env (comma-separated) else fallback
-const rawOrigins = process.env.CORS_ORIGINS || 'http://localhost:5173,http://localhost:5174';
+const rawOrigins = process.env.CORS_ORIGINS;
 const allowedOrigins = rawOrigins.split(',').map(o => o.trim());
 app.use(cors({
   origin: (origin, callback) => {
