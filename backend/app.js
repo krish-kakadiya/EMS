@@ -30,7 +30,7 @@ app.use(helmet({
 app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
 
 // Dynamic CORS origin allowlist via env (comma-separated) else fallback
-const rawOrigins = process.env.CORS_ORIGINS;
+const rawOrigins = process.env.CORS_ORIGINS || "https://ems-git-main-krish1911s-projects.vercel.app,http://localhost:5173";
 const allowedOrigins = rawOrigins.split(',').map(o => o.trim());
 app.use(cors({
   origin: (origin, callback) => {
