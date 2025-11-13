@@ -56,7 +56,7 @@ const LoginPage = () => {
     const loadingToast = toast.loading("Sending OTP to your email...");
 
     try {
-      const response = await axios.post("/api/auth/send-reset-code", {
+      const response = await axios.post("/auth/send-reset-code", {
         email: email,
       });
       
