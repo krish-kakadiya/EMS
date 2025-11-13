@@ -88,7 +88,7 @@ const LoginPage = () => {
 
   setIsVerifying(true);
   try {
-    const response = await axios.post("/api/auth/verify-reset-code", {
+    const response = await axios.post("/auth/verify-reset-code", {
       email: email,
       code: resetCode,
     });
@@ -132,7 +132,7 @@ const LoginPage = () => {
     const loadingToast = toast.loading("Resending OTP...");
 
     try {
-      const response = await axios.post("/api/auth/send-reset-code", {
+      const response = await axios.post("/auth/send-reset-code", {
         email: email,
       });
       
